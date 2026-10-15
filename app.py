@@ -2,7 +2,7 @@ import streamlit as st
 import pandas as pd
 import os
 
-st.set_page_config(page_title="Redirecionador Inteligente de Tracking", page_icon="⚓", layout="wide")
+st.set_page_config(page_title="Rastreamento de Contêineres", page_icon="⚓", layout="wide")
 
 # --- SISTEMA DE LOGIN ---
 if "autenticado" not in st.session_state:
@@ -72,7 +72,7 @@ df_tracking = carregar_dados()
 # Botão de sair (Logout) no canto superior direito
 col_titulo, col_sair = st.columns([8, 1])
 with col_titulo:
-    st.title("⚓ Redirecionador Inteligente de Contêineres - Comex")
+    st.title("⚓ RASTREAMENTO DE CONTEINERS")
 with col_sair:
     st.write("") # Espaço em branco
     if st.button("🚪 Sair"):
