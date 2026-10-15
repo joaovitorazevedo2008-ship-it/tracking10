@@ -40,8 +40,7 @@ def salvar_dados(df):
 df_tracking = carregar_dados()
 
 st.title("⚓ Redirecionador Inteligente de Contêineres - Comex")
-st.markdown("Digite o número do contêiner e a IA identifica o armador e gera o link direto para a consulta instantânea!")
-
+st.markdown(f"### 🔗 [Clique aqui para abrir o rastreio direto no site da {armador_encontrado}]({link_direto})")
 aba1, aba2 = st.tabs(["🔍 Consulta Rápida por Prefixo", "📋 Painel e Histórico"])
 
 with aba1:
