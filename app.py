@@ -1,11 +1,12 @@
 import streamlit as st
 import pandas as pd
 import os
+from datetime import datetime, date
 
 # Configuração inicial da página
 st.set_page_config(page_title="Rastreamento de Contêineres", page_icon="⚓", layout="wide", initial_sidebar_state="expanded")
 
-# --- DESIGN CUSTOMIZADO (FUNDO AZUL E ESCRITA AMARELO EM TODOS OS CAMPOS E MENUS) ---
+# --- DESIGN CUSTOMIZADO (MANTENDO AS CORES E ELEVANDO O PROFISSIONALISMO) ---
 st.markdown("""
     <style>
     /* Fundo da aplicação Branco */
@@ -184,7 +185,7 @@ def identificar_armador(container):
         return "Outro / Não Mapeado", f"https://www.google.com/search?q=tracking+container+{container.strip()}"
 
 def carregar_dados():
-    colunas_padrao = ["Processo", "Container", "Armador Detectado", "Status", "Porto de Transbordo", "Data Transbordo", "Destino Final", "ETA Destino", "DOOR/RAMP", "E-mail Pronto"]
+    colunas_padrao = ["Processo", "Container", "Armador Detectado", "Status", "Porto de Transbordo", "Data Transbordo", "Destino Final", "ETA Destino", "DOOR/RAMP", "E-mail Pronto", "Alerta ETA"]
     if os.path.exists(ARQUIVO_DADOS):
         df = pd.read_csv(ARQUIVO_DADOS)
         if "Link de Rastreio" in df.columns:
@@ -199,11 +200,43 @@ def carregar_dados():
 def salvar_dados(df):
     df.to_csv(ARQUIVO_DADOS, index=False)
 
+def calcular_alerta_eta(eta_str):
+    if not eta_str or eta_str == "DD/MM/AAAA":
+        return "A Confirmar"
+    try:
+        # Tenta converter o formato DD/MM/AAAA
+        data_eta = datetime.strptime(eta_str.strip(), "%d/%m/%Y").date()
+        hoje = date.today()
+        if data_eta < hoje:
+            return "🚨 Vencido"
+        elif data_eta == hoje:
+            return "⚠️ Vence Hoje"
+        else:
+            return "✅ No Prazo"
+    except ValueError:
+        return "A Confirmar"
+
 df_tracking = carregar_dados()
 
 st.title("⚓ RASTREAMENTO DE CONTÊINERES")
 
-aba1, aba2, aba3 = st.tabs(["🚀 1. Buscar e Atualizar Carga", "📋 2. Histórico Geral", "✏️ 3. Edição Rápida de Dados"])
+# --- DASHBOARD EXECUTIVO DE MÉTRICAS ---
+if not df_tracking.empty:
+    df_ultimos = df_tracking.drop_duplicates(subset=['Container'], keep='last')
+    total_cargas = len(df_ultimos)
+    em_transito = len(df_ultimos[df_ultimos['Status'].isin(["Em trânsito", "A caminho do destino final"])])
+    liberadas = len(df_ultimos[df_ultimos['Status'].isin(["Liberado na Alfândega", "Disponível para Retirada", "Chegada confirmada"])])
+    
+    col_m1, col_m2, col_m3 = st.columns(3)
+    with col_m1:
+        st.metric(label="📦 Total de Contêineres Ativos", value=total_cargas)
+    with col_m2:
+        st.metric(label="🚢 Cargas em Trânsito / Viagem", value=em_transito)
+    with col_m3:
+        st.metric(label="✨ Cargas Liberadas / Disponíveis", value=liberadas)
+    st.markdown("---")
+
+aba1, aba2, aba3 = st.tabs(["🚀 1. Buscar e Atualizar Carga", "📋 2. Histórico Geral com Alertas de ETA", "✏️ 3. Edição Rápida de Dados"])
 
 with aba1:
     st.markdown("### 🔍 Passo 1: Buscar por Referência / Processo")
@@ -296,6 +329,7 @@ with aba1:
         if btn_analisar or btn_email:
             if ref_atual and container_input:
                 armador_encontrado, link_direto = identificar_armador(container_input)
+                alerta_status_eta = calcular_alerta_eta(eta_input)
                 
                 local_destino = f" ({destino_final_input})" if destino_final_input else ""
                 modalidade = f" na modalidade {door_ramp_input}" if door_ramp_input else ""
@@ -335,7 +369,8 @@ with aba1:
                     "Destino Final": destino_final_input,
                     "ETA Destino": eta_input,
                     "DOOR/RAMP": door_ramp_input,
-                    "E-mail Pronto": "Gerado"
+                    "E-mail Pronto": "Gerado",
+                    "Alerta ETA": alerta_status_eta
                 }
                 df_tracking = pd.concat([df_tracking, pd.DataFrame([nova_linha])], ignore_index=True)
                 salvar_dados(df_tracking)
@@ -354,12 +389,16 @@ with aba1:
                 st.error("⚠️ Por favor, informe o Nº do Contêiner antes de prosseguir.")
 
 with aba2:
-    st.subheader("Base Geral de Dados")
+    st.subheader("Base Geral de Dados com Alertas Inteligentes de ETA")
     if df_tracking.empty:
         st.info("Nenhum registro encontrado.")
     else:
         df_tracking['Processo'] = df_tracking['Processo'].astype(str).str.upper()
         df_tracking['Container'] = df_tracking['Container'].astype(str).str.upper()
+        
+        # Atualiza a coluna de alertas para todos os registros carregados
+        df_tracking['Alerta ETA'] = df_tracking['ETA Destino'].apply(calcular_alerta_eta)
+        
         st.dataframe(df_tracking, use_container_width=True)
         if st.button("🗑️ Limpar Todos os Registros"):
             if os.path.exists(ARQUIVO_DADOS):
@@ -378,6 +417,8 @@ with aba3:
         
         if st.button("💾 Salvar Modificações"):
             df_tracking.update(df_editado)
+            # Recalcula o alerta de ETA caso o usuário tenha alterado a data na edição
+            df_tracking['Alerta ETA'] = df_tracking['ETA Destino'].apply(calcular_alerta_eta)
             salvar_dados(df_tracking)
             st.success("Dados salvos e atualizados no banco!")
             st.rerun()
