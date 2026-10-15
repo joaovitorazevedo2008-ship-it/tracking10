@@ -2,6 +2,14 @@ import streamlit as st
 import pandas as pd
 import os
 from datetime import datetime, date
+import io
+
+# Tenta importar a biblioteca de leitura de PDF
+try:
+    from pypdf import PdfReader
+    has_pypdf = True
+except ImportError:
+    has_pypdf = False
 
 # Configuração inicial da página com tema forçado para claro
 st.set_page_config(
@@ -165,11 +173,11 @@ if not st.session_state["autenticado"]:
     st.stop()
 # ------------------------
 
-# --- BARRA LATERAL DIDÁTICA ---
+# --- BARRA LATERAL ---
 with st.sidebar:
     st.markdown("### 📖 Guia do Sistema")
-    st.markdown("**1️⃣ Pesquisa:** Informe a referência para abrir os dados cadastrados ou iniciar um novo registo.")
-    st.markdown("**2️⃣ Atualização:** Insira o contêiner (identificação automática do armador), status e prazos.")
+    st.markdown("**1️⃣ Pesquisa/Upload:** Procure por referência ou faça upload do PDF de Booking para preenchimento automático.")
+    st.markdown("**2️⃣ Atualização:** Insira o contêiner, status e prazos.")
     st.markdown("**3️⃣ Comunicação:** Salve e gere e-mails padronizados instantaneamente.")
     st.markdown("---")
     if st.button("🚪 Encerrar Sessão"):
@@ -239,11 +247,7 @@ df_tracking = carregar_dados()
 
 st.title("⚓ GESTÃO DE RASTREAMENTO LOGÍSTICO")
 
-# --- CONTROLE DE FILTROS DO DASHBOARD NA SESSÃO ---
-if "filtro_dashboard" not in st.session_state:
-    st.session_state["filtro_dashboard"] = "Todos"
-
-# --- DASHBOARD EXECUTIVO COM BOTÕES DE ATALHO PARA EXIBIR PROCESSOS ---
+# --- DASHBOARD EXECUTIVO INTERATIVO ---
 if not df_tracking.empty:
     df_ultimos = df_tracking.drop_duplicates(subset=['Container'], keep='last')
     total_cargas = len(df_ultimos)
@@ -252,6 +256,9 @@ if not df_tracking.empty:
     
     st.markdown("### 📊 Visão Geral da Operação (Clique para listar os processos)")
     col_m1, col_m2, col_m3 = st.columns(3)
+    
+    if "filtro_dashboard" not in st.session_state:
+        st.session_state["filtro_dashboard"] = "Todos"
 
     with col_m1:
         if st.button(f"📦 Ver Todos os Processos ({total_cargas})", use_container_width=True):
@@ -265,15 +272,40 @@ if not df_tracking.empty:
             
     st.markdown("<br>", unsafe_allow_html=True)
 
-aba1, aba2, aba3 = st.tabs(["🚀 1. Consulta e Atualização", "📋 2. Histórico Consolidado e Filtros", "✏️ 3. Edição Rápida"])
+aba1, aba2, aba3 = st.tabs(["🚀 1. Consulta, Upload e Atualização", "📋 2. Histórico Consolidado e Filtros", "✏️ 3. Edição Rápida"])
 
 with aba1:
-    st.markdown("### 🔍 Pesquisa de Referência / Processo")
+    st.markdown("### 🔍 Pesquisa de Referência ou Upload de Booking")
     
     if "ref_pesquisada" not in st.session_state:
         st.session_state["ref_pesquisada"] = ""
     if "liberar_formulario" not in st.session_state:
         st.session_state["liberar_formulario"] = False
+    if "pdf_container_extraido" not in st.session_state:
+        st.session_state["pdf_container_extraido"] = ""
+
+    # Opção de UPLOAD DE BOOKING (PDF)
+    if has_pypdf:
+        st.markdown("#### 📄 Automação por PDF (Booking Confirmation)")
+        arquivo_pdf = st.file_uploader("Faça o upload do Booking em PDF para preenchimento automático", type=["pdf"])
+        if arquivo_pdf is not None:
+            try:
+                leitor = PdfReader(arquivo_pdf)
+                texto_pdf = ""
+                for pagina in leitor.pages:
+                    texto_pdf += pagina.extract_text() or ""
+                
+                # Extração simples de contêiner baseada em padrão de 4 letras + 7 números
+                import re
+                padrao_container = re.search(r'[A-Z]{4}\d{7}', texto_pdf.upper())
+                if padrao_container:
+                    st.session_state["pdf_container_extraido"] = padrao_container.group(0)
+                    st.success(f"✨ Contêiner **{st.session_state['pdf_container_extraido']}** detetado automaticamente no PDF!")
+                else:
+                    st.warning("⚠️ Não foi possível identificar um contêiner no formato padrão (ex: MSCU1234567) neste PDF.")
+            except Exception as e:
+                st.error(f"Erro ao ler o ficheiro PDF: {e}")
+        st.markdown("---")
 
     with st.form("form_busca_ref"):
         input_pesquisa = st.text_input("Nº do Processo / Referência", value=st.session_state["ref_pesquisada"])
@@ -291,7 +323,8 @@ with aba1:
         ref_atual = st.session_state["ref_pesquisada"]
         filtro_proc = df_tracking[df_tracking['Processo'].astype(str).str.upper() == ref_atual]
         
-        def_container = ""
+        # Se veio contêiner extraído do PDF, usa ele como padrão se não houver no banco
+        def_container = st.session_state.get("pdf_container_extraido", "")
         def_porto = ""
         def_data_t = ""
         def_dest = ""
@@ -312,7 +345,7 @@ with aba1:
 
         if not filtro_proc.empty:
             ultimo_reg = filtro_proc.iloc[-1]
-            def_container = str(ultimo_reg.get("Container", ""))
+            def_container = str(ultimo_reg.get("Container", "")) or def_container
             def_porto = str(ultimo_reg.get("Porto de Transbordo", ""))
             def_data_t = str(ultimo_reg.get("Data Transbordo", ""))
             def_dest = str(ultimo_reg.get("Destino Final", ""))
@@ -326,7 +359,7 @@ with aba1:
             status_salvo = str(ultimo_reg.get("Status", ""))
             if status_salvo in status_opcoes: def_status = status_salvo
             
-            st.success(f"✨ Referência **{ref_atual}** localizada. Dados preenchidos automaticamente.")
+            st.success(f"✨ Referência **{ref_atual}** localizada. Dados carregados.")
         else:
             st.info(f"ℹ️ Nova referência **{ref_atual}**. Preencha os campos abaixo para registar a carga.")
 
