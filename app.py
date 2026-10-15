@@ -60,7 +60,7 @@ st.markdown("""
         -webkit-text-fill-color: #FFC000 !important;
     }
 
-    /* Efeito ao passar o mouse por cima das opções do menu (Azul mais claro com amarelo forte) */
+    /* Efeito ao passar o mouse por cima das opções do menu */
     ul[role="listbox"] li:hover, div[role="option"]:hover {
         background-color: #004C99 !important;
         color: #FFD633 !important;
@@ -156,9 +156,9 @@ if not st.session_state["autenticado"]:
 # --- BARRA LATERAL DIDÁTICA ---
 with st.sidebar:
     st.markdown("### 📖 Como usar?")
-    st.markdown("**1️⃣ Busca Inteligente:** Digite o número do contêiner e tecle `ENTER`. O sistema preenche o histórico se já existir.")
-    st.markdown("**2️⃣ Preencha os Dados:** Atualize datas, status e destinos conforme a situação atual da carga.")
-    st.markdown("**3️⃣ Geração de E-mail:** Escolha se quer apenas registrar no sistema ou se deseja gerar o texto pronto para enviar ao cliente.")
+    st.markdown("**1️⃣ Buscar Referência:** Digite o Nº do Processo/Referência. Se já existir, os dados aparecem automaticamente. Se não, preencha para cadastrar.")
+    st.markdown("**2️⃣ Preencher Contêiner:** Informe o contêiner para identificação automática do armador.")
+    st.markdown("**3️⃣ Ações:** Salve os dados ou gere o e-mail pronto para o cliente.")
     st.markdown("---")
     if st.button("🚪 Sair do Sistema"):
         st.session_state["autenticado"] = False
@@ -212,14 +212,16 @@ df_tracking = carregar_dados()
 
 st.title("⚓ RASTREAMENTO DE CONTÊINERES")
 
-aba1, aba2, aba3 = st.tabs(["🚀 1. Atualizar Carga / Gerar E-mail", "📋 2. Histórico Geral", "✏️ 3. Edição Rápida de Dados"])
+aba1, aba2, aba3 = st.tabs(["🚀 1. Buscar Referência / Carga", "📋 2. Histórico Geral", "✏️ 3. Edição Rápida de Dados"])
 
 with aba1:
-    st.info("💡 **DICA:** Digite o número do contêiner abaixo e pressione **ENTER**. O sistema buscará o histórico e preencherá tudo automaticamente para você!")
+    st.markdown("### 🔍 Passo 1: Buscar por Referência ou Processo")
+    st.info("💡 Digite o número da referência/processo abaixo e tecle **ENTER**. Se já existir, os dados serão carregados. Se não, você poderá preenchê-los.")
     
-    container_input = st.text_input("🔍 Digite o Nº do Contêiner (Ex: MSCU1234567)").strip().upper()
+    # Campo primário de busca por Referência
+    processo_input = st.text_input("Nº do Processo / Referência de Busca").strip()
     
-    def_proc = ""
+    def_container = ""
     def_porto = ""
     def_data_t = ""
     def_dest = ""
@@ -238,11 +240,13 @@ with aba1:
         "Disponível para Retirada"
     ]
     
-    if container_input:
-        filtro = df_tracking[df_tracking['Container'] == container_input]
-        if not filtro.empty:
-            ultimo_reg = filtro.iloc[-1]
-            def_proc = str(ultimo_reg.get("Processo", ""))
+    encontrou_referencia = False
+    if processo_input:
+        filtro_proc = df_tracking[df_tracking['Processo'].astype(str).str.upper() == processo_input.upper()]
+        if not filtro_proc.empty:
+            encontrou_referencia = True
+            ultimo_reg = filtro_proc.iloc[-1]
+            def_container = str(ultimo_reg.get("Container", ""))
             def_porto = str(ultimo_reg.get("Porto de Transbordo", ""))
             def_data_t = str(ultimo_reg.get("Data Transbordo", ""))
             def_dest = str(ultimo_reg.get("Destino Final", ""))
@@ -256,16 +260,19 @@ with aba1:
             status_salvo = str(ultimo_reg.get("Status", ""))
             if status_salvo in status_opcoes: def_status = status_salvo
             
-            st.success(f"✨ Histórico localizado! Preenchemos os campos com a última atualização.")
+            st.success(f"✨ Referência **{processo_input}** encontrada! Os dados salvos foram carregados abaixo.")
+        else:
+            st.warning(f"⚠️ Referência **{processo_input}** ainda não cadastrada. Preencha os campos abaixo para adicionar nova carga.")
 
     idx_status = status_opcoes.index(def_status)
 
     with st.form("form_dados_carga"):
-        st.markdown("### 📝 Dados e Status da Carga")
+        st.markdown("### 📝 Passo 2: Dados do Contêiner e Status")
         
         col1, col2 = st.columns(2)
         with col1:
-            processo_input = st.text_input("Nº do Processo / Referência", value=def_proc, help="O número interno do processo na empresa.")
+            # Campo para o Contêiner
+            container_input = st.text_input("Nº do Contêiner (Ex: MSCU1234567)", value=def_container, help="Informe o contêiner para identificar o armador automaticamente.")
             porto_transbordo_input = st.text_input("Porto de Transbordo", value=def_porto, help="Opcional. Preencha apenas se houver transbordo.")
             data_transbordo_input = st.text_input("Data no Transbordo", value=def_data_t, help="Data de chegada no porto de transbordo.")
             
@@ -275,7 +282,7 @@ with aba1:
             eta_input = st.text_input("Previsão de Chegada (ETA)", value=def_eta, help="Formato DD/MM/AAAA. Deixe em branco se a confirmar.")
             door_ramp_input = st.text_input("Modalidade (DOOR/RAMP)", value=def_door, help="Opcional. Informe a modalidade caso aplicável.")
             
-        st.markdown("### 🚀 Ação")
+        st.markdown("### 🚀 Passo 3: Ação")
         col_btn1, col_btn2 = st.columns(2)
         with col_btn1:
             btn_analisar = st.form_submit_button("Apenas Salvar Dados")
@@ -283,7 +290,7 @@ with aba1:
             btn_email = st.form_submit_button("Gerar E-mail p/ Cliente", type="primary")
     
     if btn_analisar or btn_email:
-        if container_input:
+        if processo_input and container_input:
             armador_encontrado, link_direto = identificar_armador(container_input)
             
             local_destino = f" ({destino_final_input})" if destino_final_input else ""
@@ -315,7 +322,7 @@ with aba1:
                 corpo_email = f"Prezado cliente,\n\nInformamos que a carga referente ao processo {processo_input} (Contêiner: {container_input.upper()}) encontra-se disponível para retirada{local_destino}{modalidade}."
 
             nova_linha = {
-                "Processo": processo_input,
+                "Processo": processo_input.upper(),
                 "Container": container_input.upper(),
                 "Armador Detectado": armador_encontrado,
                 "Status": status_input,
@@ -335,21 +342,20 @@ with aba1:
                 st.text_area("📋 Texto Pronto para Copiar:", value=corpo_email, height=150)
             
             st.markdown("---")
-            st.subheader("🕒 Linha do Tempo desta Carga")
-            if processo_input:
-                historico_ref = df_tracking[(df_tracking['Container'] == container_input.upper()) | (df_tracking['Processo'] == processo_input)]
-            else:
-                historico_ref = df_tracking[df_tracking['Container'] == container_input.upper()]
+            st.subheader("🕒 Linha do Tempo desta Referência")
+            historico_ref = df_tracking[(df_tracking['Container'] == container_input.upper()) | (df_tracking['Processo'].astype(str).str.upper() == processo_input.upper())]
             st.dataframe(historico_ref, use_container_width=True)
             
         else:
-            st.error("⚠️ Por favor, informe o número do contêiner antes de prosseguir.")
+            st.error("⚠️ Por favor, informe o Nº do Processo/Referência e o Nº do Contêiner antes de prosseguir.")
 
 with aba2:
     st.subheader("Base Geral de Dados")
     if df_tracking.empty:
         st.info("Nenhum registro encontrado.")
     else:
+        df_tracking['Processo'] = df_tracking['Processo'].astype(str).str.upper()
+        df_tracking['Container'] = df_tracking['Container'].astype(str).str.upper()
         st.dataframe(df_tracking, use_container_width=True)
         if st.button("🗑️ Limpar Todos os Registros"):
             if os.path.exists(ARQUIVO_DADOS):
