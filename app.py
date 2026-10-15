@@ -40,7 +40,8 @@ def salvar_dados(df):
 df_tracking = carregar_dados()
 
 st.title("⚓ Redirecionador Inteligente de Contêineres - Comex")
-st.markdown(f"### 🔗 [Clique aqui para abrir o rastreio direto no site da {armador_encontrado}]({link_direto})")
+st.markdown("Digite o número do contêiner e a IA identifica o armador e gera o link direto para a consulta instantânea!")
+
 aba1, aba2 = st.tabs(["🔍 Consulta Rápida por Prefixo", "📋 Painel e Histórico"])
 
 with aba1:
@@ -64,4 +65,49 @@ with aba1:
                 st.success(f"Armador identificado com sucesso: **{armador_encontrado}**")
                 
                 # Exibe o botão de redirecionamento direto
-                st.markdown(f
+                st.markdown(f"### 🔗 [Clique aqui para abrir o rastreio direto no site da {armador_encontrado}]({link_direto})")
+                
+                # Gera o e-mail pronto para o cliente
+                corpo_email = f"""Prezado(a) Cliente,
+
+Gostaríamos de atualizar o status do processo {processo_input}:
+
+• Contêiner: {container_input.upper()}
+• Armador: {armador_encontrado}
+• Previsão de Chegada (ETA): {eta_input}
+• Status Atual: {status_input}
+
+Você pode acompanhar o rastreio oficial clicando no link abaixo:
+{link_direto}
+
+Qualquer dúvida, estamos à disposição.
+Atenciosamente,
+Sua Equipe de Logística"""
+
+                st.text_area("Modelo de E-mail Pronto para Copiar:", value=corpo_email, height=220)
+                
+                # Salva no histórico
+                nova_linha = {
+                    "Processo": processo_input,
+                    "Container": container_input.upper(),
+                    "Armador Detectado": armador_encontrado,
+                    "Link de Rastreio": link_direto,
+                    "Status": status_input,
+                    "E-mail Pronto": "Gerado"
+                }
+                global df_tracking
+                df_tracking = pd.concat([df_tracking, pd.DataFrame([nova_linha])], ignore_index=True)
+                salvar_dados(df_tracking)
+            else:
+                st.error("Por favor, informe o número do contêiner.")
+
+with aba2:
+    st.subheader("Histórico de Contêineres Consultados")
+    if df_tracking.empty:
+        st.info("Nenhum contêiner consultado ainda.")
+    else:
+        st.dataframe(df_tracking, use_container_width=True)
+        if st.button("🗑️ Limpar Histórico"):
+            if os.path.exists(ARQUIVO_DADOS):
+                os.remove(ARQUIVO_DADOS)
+            st.rerun()
