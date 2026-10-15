@@ -5,7 +5,7 @@ import os
 # Configuração inicial da página
 st.set_page_config(page_title="Rastreamento de Contêineres", page_icon="⚓", layout="wide", initial_sidebar_state="expanded")
 
-# --- DESIGN CUSTOMIZADO (FUNDOS AZUIS, BORDAS AMARELAS E TEXTO BRANCO) ---
+# --- DESIGN CUSTOMIZADO (FUNDOS AZUIS, ESCRITA AMARELA E CONTORNO AMARELO) ---
 st.markdown("""
     <style>
     /* Fundo da aplicação Branco */
@@ -18,23 +18,49 @@ st.markdown("""
         color: #003366 !important;
     }
 
-    /* Campos de Entrada (Input, Selectbox, Text Area) - Fundo Azul e Borda Amarela */
-    input, select, textarea, div[data-baseweb="select"] > div, [data-baseweb="input"] input {
+    /* Campos de Entrada (Input, Text Area) - Fundo Azul e Borda Amarela com texto Amarelo */
+    input, textarea, [data-baseweb="input"] input {
         background-color: #003366 !important;
-        color: #FFFFFF !important;
+        color: #FFC000 !important;
+        border: 2px solid #FFC000 !important;
+        border-radius: 8px !important;
+        -webkit-text-fill-color: #FFC000 !important;
+    }
+
+    /* Caixa principal do Selectbox (Menu Suspenso) */
+    div[data-baseweb="select"] > div {
+        background-color: #003366 !important;
+        color: #FFC000 !important;
         border: 2px solid #FFC000 !important;
         border-radius: 8px !important;
     }
     
-    /* Garante que o texto digitado e selecionado dentro dos campos fique branco */
-    input, textarea, div[data-baseweb="select"] span, [data-baseweb="input"] input {
-        color: #FFFFFF !important;
-        -webkit-text-fill-color: #FFFFFF !important;
+    /* Texto selecionado dentro do Selectbox */
+    div[data-baseweb="select"] span {
+        color: #FFC000 !important;
+        -webkit-text-fill-color: #FFC000 !important;
     }
 
-    /* Ícones e setas dentro dos selects em amarelo */
+    /* Ícone da seta do selectbox em amarelo */
     .stSelectbox svg {
         fill: #FFC000 !important;
+    }
+
+    /* POPUP/LISTA DE OPÇÕES DO SELECTBOX (Fundo azul, texto amarelo) */
+    div[data-baseweb="popover"], div[data-baseweb="menu"], ul[role="listbox"] {
+        background-color: #003366 !important;
+    }
+    
+    /* Itens dentro da lista de opções do selectbox */
+    div[data-baseweb="menu"] div, ul[role="listbox"] li, ul[role="listbox"] div {
+        background-color: #003366 !important;
+        color: #FFC000 !important;
+    }
+
+    /* Efeito ao passar o mouse por cima das opções do menu */
+    ul[role="listbox"] li:hover, div[role="option"]:hover {
+        background-color: #004C99 !important;
+        color: #FFD633 !important;
     }
 
     /* Botão Principal (Amarelo com texto Azul) */
