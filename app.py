@@ -5,7 +5,7 @@ import os
 # Configuração inicial da página
 st.set_page_config(page_title="Rastreamento de Contêineres", page_icon="⚓", layout="wide", initial_sidebar_state="expanded")
 
-# --- DESIGN CUSTOMIZADO (GARANTINDO TEXTO VISÍVEL E CORES CORRETAS) ---
+# --- DESIGN CUSTOMIZADO (FUNDOS AZUIS, BORDAS AMARELAS E TEXTO BRANCO) ---
 st.markdown("""
     <style>
     /* Fundo da aplicação Branco */
@@ -13,9 +13,28 @@ st.markdown("""
         background-color: #FFFFFF;
     }
     
-    /* Força todos os textos, títulos e labels a ficarem visíveis em Azul Escuro */
+    /* Textos gerais e títulos em Azul Escuro */
     .stApp, p, span, div, label, h1, h2, h3, h4, h5, .stMarkdown {
         color: #003366 !important;
+    }
+
+    /* Campos de Entrada (Input, Selectbox, Text Area) - Fundo Azul e Borda Amarela */
+    input, select, textarea, div[data-baseweb="select"] > div, [data-baseweb="input"] input {
+        background-color: #003366 !important;
+        color: #FFFFFF !important;
+        border: 2px solid #FFC000 !important;
+        border-radius: 8px !important;
+    }
+    
+    /* Garante que o texto digitado e selecionado dentro dos campos fique branco */
+    input, textarea, div[data-baseweb="select"] span, [data-baseweb="input"] input {
+        color: #FFFFFF !important;
+        -webkit-text-fill-color: #FFFFFF !important;
+    }
+
+    /* Ícones e setas dentro dos selects em amarelo */
+    .stSelectbox svg {
+        fill: #FFC000 !important;
     }
 
     /* Botão Principal (Amarelo com texto Azul) */
@@ -37,7 +56,7 @@ st.markdown("""
     button[kind="secondary"] {
         background-color: #003366 !important;
         color: #FFFFFF !important;
-        border: none !important;
+        border: 2px solid #FFC000 !important;
         font-weight: bold !important;
         border-radius: 8px !important;
         transition: 0.3s;
@@ -48,7 +67,7 @@ st.markdown("""
         transform: scale(1.02);
     }
 
-    /* Abas Superiores com texto azul escuro e legível */
+    /* Abas Superiores */
     .stTabs [data-baseweb="tab-list"] {
         border-bottom: 3px solid #FFC000;
         background-color: #F8FAFC;
@@ -178,7 +197,6 @@ with aba1:
     def_door = ""
     def_status = "Embarcado"
     
-    # Lista de status atualizada com os novos itens solicitados
     status_opcoes = [
         "Embarcado",
         "Em trânsito", 
@@ -249,7 +267,6 @@ with aba1:
                 data_t = f" para o dia {data_transbordo_input}" if data_transbordo_input else ""
                 frase_transbordo = f" Lembramos que a carga possui transbordo previsto no porto de {porto_transbordo_input}{data_t}."
 
-            # --- MODELOS DE E-MAIL ATUALIZADOS ---
             if status_input == "Embarcado":
                 corpo_email = f"Prezado cliente,\n\nInformamos que a carga referente ao processo {processo_input} (Contêiner: {container_input.upper()}) foi embarcada no porto de Santos.\n{frase_eta}{frase_transbordo}"
             elif status_input == "Em trânsito":
