@@ -5,7 +5,7 @@ import os
 # Configuração inicial da página
 st.set_page_config(page_title="Rastreamento de Contêineres", page_icon="⚓", layout="wide", initial_sidebar_state="expanded")
 
-# --- DESIGN CUSTOMIZADO (FUNDOS AZUIS, ESCRITA AMARELA E CONTORNO AMARELO) ---
+# --- DESIGN CUSTOMIZADO (FUNDO AZUL E ESCRITA AMARELA EM TODOS OS CAMPOS E MENUS) ---
 st.markdown("""
     <style>
     /* Fundo da aplicação Branco */
@@ -46,21 +46,25 @@ st.markdown("""
         fill: #FFC000 !important;
     }
 
-    /* POPUP/LISTA DE OPÇÕES DO SELECTBOX (Fundo azul, texto amarelo) */
+    /* POPUP/LISTA DE OPÇÕES DO SELECTBOX (Fundo azul com borda amarela) */
     div[data-baseweb="popover"], div[data-baseweb="menu"], ul[role="listbox"] {
         background-color: #003366 !important;
+        border: 2px solid #FFC000 !important;
+        border-radius: 8px !important;
     }
     
-    /* Itens dentro da lista de opções do selectbox */
-    div[data-baseweb="menu"] div, ul[role="listbox"] li, ul[role="listbox"] div {
+    /* TODOS OS ITENS DE TEXTO DENTRO DA LISTA DO MENU */
+    div[data-baseweb="menu"] div, div[data-baseweb="menu"] span, ul[role="listbox"] li, ul[role="listbox"] span, div[role="option"] {
         background-color: #003366 !important;
         color: #FFC000 !important;
+        -webkit-text-fill-color: #FFC000 !important;
     }
 
-    /* Efeito ao passar o mouse por cima das opções do menu */
+    /* Efeito ao passar o mouse por cima das opções do menu (Azul mais claro com amarelo forte) */
     ul[role="listbox"] li:hover, div[role="option"]:hover {
         background-color: #004C99 !important;
         color: #FFD633 !important;
+        -webkit-text-fill-color: #FFD633 !important;
     }
 
     /* Botão Principal (Amarelo com texto Azul) */
