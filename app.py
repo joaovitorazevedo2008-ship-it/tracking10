@@ -43,7 +43,8 @@ def identificar_armador(container):
         return "Hapag-Lloyd", f"https://www.hapag-lloyd.com/en/online-business/track/track-by-container.html?container={container.strip()}"
     elif prefixo in ["CMAU", "CGMU", "CGHU", "CMNU", "ECMU", "AMCU", "TGHU"]:
         return "CMA CGM", f"https://www.cma-cgm.com/ebusiness/tracking/search?SearchBy=Container&SearchValue={container.strip()}"
-    elif prefixo in ["ONEU", "NYKU"]:
+    # Prefixo TCLU adicionado à ONE abaixo:
+    elif prefixo in ["ONEU", "NYKU", "TCLU"]:
         return "ONE (Ocean Network Express)", f"https://ecomm.one-line.com/ecom/CUP_HOM_3301.do?sessLocale=en&bkgNo={container.strip()}"
     elif prefixo in ["COSU", "CSLU", "CSNU", "CBHU", "FCIU"]:
         return "COSCO", f"https://elines.coscoshipping.com/ebusiness/cargoTracking?trackingType=CONTAINER&trackingNumber={container.strip()}"
@@ -177,7 +178,6 @@ Informamos que a carga referente ao processo {processo_input} (Contêiner: {cont
                 st.markdown(f"### 🔗 [Clique aqui para abrir o rastreio direto no site da {armador_encontrado}]({link_direto})")
                 
                 if btn_email:
-                    # Altura reduzida já que o texto é menor
                     st.text_area("Modelo de E-mail Pronto para Copiar:", value=corpo_email, height=150)
                 
                 st.markdown("---")
