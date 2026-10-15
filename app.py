@@ -6,7 +6,7 @@ from datetime import datetime, date
 # Configuração inicial da página
 st.set_page_config(page_title="Rastreamento de Contêineres", page_icon="⚓", layout="wide", initial_sidebar_state="expanded")
 
-# --- DESIGN CORPORATIVO E PROFISSIONAL (AZUL, AMARELO E BRANCO) ---
+# --- DESIGN CORPORATIVO E PADRONIZADO (AZUL, AMARELO E BRANCO) ---
 st.markdown("""
     <style>
     /* Fundo da aplicação corporativo */
@@ -127,6 +127,14 @@ st.markdown("""
         border-left: 4px solid #FFC000 !important;
     }
 
+    /* Padronização das Tabelas */
+    [data-testid="stDataFrame"], [data-testid="stTable"] {
+        background-color: #FFFFFF !important;
+        border: 1px solid #CBD5E1 !important;
+        border-radius: 8px !important;
+        padding: 5px;
+    }
+
     /* Barra Lateral */
     [data-testid="stSidebar"] {
         background-color: #FFFFFF !important;
@@ -242,20 +250,30 @@ df_tracking = carregar_dados()
 
 st.title("⚓ GESTÃO DE RASTREAMENTO LOGÍSTICO")
 
-# --- DASHBOARD EXECUTIVO ---
+# --- DASHBOARD EXECUTIVO INTERATIVO ---
 if not df_tracking.empty:
     df_ultimos = df_tracking.drop_duplicates(subset=['Container'], keep='last')
     total_cargas = len(df_ultimos)
     em_transito = len(df_ultimos[df_ultimos['Status'].isin(["Em trânsito", "A caminho do destino final"])])
     liberadas = len(df_ultimos[df_ultimos['Status'].isin(["Liberado na Alfândega", "Disponível para Retirada", "Chegada confirmada"])])
     
+    st.markdown("### 📊 Visão Geral da Operação (Clique para Filtrar)")
     col_m1, col_m2, col_m3 = st.columns(3)
+    
+    # Inicializa o filtro do dashboard na sessão
+    if "filtro_dashboard" not in st.session_state:
+        st.session_state["filtro_dashboard"] = "Todos"
+
     with col_m1:
-        st.metric(label="📦 Contêineres Ativos", value=total_cargas)
+        if st.button(f"📦 Total de Contêineres Ativos: {total_cargas}", use_container_width=True):
+            st.session_state["filtro_dashboard"] = "Todos"
     with col_m2:
-        st.metric(label="🚢 Em Trânsito / Viagem", value=em_transito)
+        if st.button(f"🚢 Em Trânsito / Viagem: {em_transito}", use_container_width=True):
+            st.session_state["filtro_dashboard"] = "Transito"
     with col_m3:
-        st.metric(label="✨ Liberados / Disponíveis", value=liberadas)
+        if st.button(f"✨ Liberados / Disponíveis: {liberadas}", use_container_width=True):
+            st.session_state["filtro_dashboard"] = "Liberados"
+            
     st.markdown("<br>", unsafe_allow_html=True)
 
 aba1, aba2, aba3 = st.tabs(["🚀 1. Consulta e Atualização", "📋 2. Histórico Consolidado", "✏️ 3. Edição Rápida"])
@@ -418,11 +436,26 @@ with aba2:
         df_tracking['Container'] = df_tracking['Container'].astype(str).str.upper()
         df_tracking['Alerta ETA'] = df_tracking['ETA Destino'].apply(calcular_alerta_eta)
         
-        st.dataframe(df_tracking, use_container_width=True)
-        if st.button("🗑️ Limpar Todos os Registros"):
-            if os.path.exists(ARQUIVO_DADOS):
-                os.remove(ARQUIVO_DADOS)
-            st.rerun()
+        # Aplica o filtro selecionado pelos botões do dashboard
+        modo_filtro = st.session_state.get("filtro_dashboard", "Todos")
+        if modo_filtro == "Transito":
+            df_exibicao = df_tracking[df_tracking['Status'].isin(["Em trânsito", "A caminho do destino final"])]
+            st.markdown("📌 *Exibindo apenas cargas em trânsito/viagem (Filtro do Dashboard ativo)*")
+        elif modo_filtro == "Liberados":
+            df_exibicao = df_tracking[df_tracking['Status'].isin(["Liberado na Alfândega", "Disponível para Retirada", "Chegada confirmada"])]
+            st.markdown("📌 *Exibindo apenas cargas liberadas ou disponíveis (Filtro do Dashboard ativo)*")
+        else:
+            df_exibicao = df_tracking
+            st.markdown("📌 *Exibindo todos os registos ativos*")
+
+        st.dataframe(df_exibicao, use_container_width=True)
+        
+        col_f1, col_f2 = st.columns([2, 1])
+        with col_f2:
+            if st.button("🗑️ Limpar Todos os Registros"):
+                if os.path.exists(ARQUIVO_DADOS):
+                    os.remove(ARQUIVO_DADOS)
+                st.rerun()
 
 with aba3:
     st.subheader("Edição Rápida da Base")
