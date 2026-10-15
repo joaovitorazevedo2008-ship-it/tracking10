@@ -134,6 +134,7 @@ Sua Equipe de Logística"""
 
                 st.text_area("Modelo de E-mail Pronto para Copiar:", value=corpo_email, height=270)
                 
+                # Salvar a nova atualização
                 nova_linha = {
                     "Processo": processo_input,
                     "Container": container_input.upper(),
@@ -144,16 +145,7 @@ Sua Equipe de Logística"""
                 }
                 df_tracking = pd.concat([df_tracking, pd.DataFrame([nova_linha])], ignore_index=True)
                 salvar_dados(df_tracking)
-            else:
-                st.error("Por favor, informe o número do contêiner.")
-
-with aba2:
-    st.subheader("Histórico de Contêineres Consultados")
-    if df_tracking.empty:
-        st.info("Nenhum contêiner consultado ainda.")
-    else:
-        st.dataframe(df_tracking, use_container_width=True)
-        if st.button("🗑️ Limpar Histórico"):
-            if os.path.exists(ARQUIVO_DADOS):
-                os.remove(ARQUIVO_DADOS)
-            st.rerun()
+                
+                # --- EXIBIR HISTÓRICO DA REFERÊNCIA ---
+                st.markdown("---")
+                st.subheader("🕒 Histórico de
