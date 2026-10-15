@@ -168,8 +168,8 @@ if not st.session_state["autenticado"]:
 # --- BARRA LATERAL ---
 with st.sidebar:
     st.markdown("### 📖 Guia do Sistema")
-    st.markdown("**1️⃣ Anexo de Booking:** Anexe o print/documento do Booking e utilize o preenchimento rápido.")
-    st.markdown("**2️⃣ Atualização:** Insira o contêiner e o status.")
+    st.markdown("**1️⃣ Anexo de Booking:** Anexe o print ou documento do Booking para consulta.")
+    st.markdown("**2️⃣ Atualização:** Insira o processo, o contêiner e os dados logísticos.")
     st.markdown("**3️⃣ Comunicação:** Salve e gere e-mails padronizados instantaneamente.")
     st.markdown("---")
     if st.button("🚪 Encerrar Sessão"):
@@ -267,35 +267,24 @@ if not df_tracking.empty:
 aba1, aba2, aba3 = st.tabs(["🚀 1. Registo e Anexo de Booking", "📋 2. Histórico Consolidado e Filtros", "✏️ 3. Edição Rápida"])
 
 with aba1:
-    st.markdown("### 📄 Anexo e Preenchimento por Booking")
+    st.markdown("### 📄 Anexo de Booking para Consulta")
     
     # Campo para anexar o print ou documento PDF do Booking
     arquivo_booking = st.file_uploader("Anexe o documento ou print do Booking (PDF, PNG, JPG)", type=["pdf", "png", "jpg", "jpeg"])
     if arquivo_booking is not None:
         st.success("✨ Booking anexado com sucesso para referência visual!")
     
-    if st.button("📥 Preencher com Dados do Booking Rexnord Exemplo"):
-        st.session_state["val_proc"] = "SSZ/CHI/1295477"
-        st.session_state["val_origem"] = "SANTOS (EMBRAPORT)"
-        st.session_state["val_data_origem"] = "11/10/2026"
-        st.session_state["val_destino"] = "INDIANAPOLIS"
-        st.session_state["val_eta"] = "05/11/2026"
-        st.session_state["val_modalidade"] = "RAMP"
-        st.success("✨ Dados preenchidos com base no Booking!")
-        st.rerun()
-
-    for k, v in [("val_proc", ""), ("val_origem", ""), ("val_data_origem", ""), ("val_destino", ""), ("val_eta", "DD/MM/AAAA"), ("val_modalidade", "")]:
-        if k not in st.session_state: st.session_state[k] = v
+    st.markdown("---")
 
     with st.form("form_dados_carga"):
         st.markdown("### 📝 Dados da Carga")
         
         col1, col2 = st.columns(2)
         with col1:
-            processo_input = st.text_input("Nº do Processo / Referência", value=st.session_state["val_proc"])
+            processo_input = st.text_input("Nº do Processo / Referência", value="")
             container_input = st.text_input("Nº do Contêiner", value="", help="Formato ex.: HAMU181362 ou MSCU1234567")
-            porto_transbordo_input = st.text_input("Porto de Transbordo / Origem", value=st.session_state["val_origem"])
-            data_transbordo_input = st.text_input("Data no Transbordo", value=st.session_state["val_data_origem"])
+            porto_transbordo_input = st.text_input("Porto de Transbordo / Origem", value="")
+            data_transbordo_input = st.text_input("Data no Transbordo", value="")
             
         with col2:
             status_opcoes = [
@@ -309,9 +298,9 @@ with aba1:
                 "Disponível para Retirada"
             ]
             status_input = st.selectbox("Status Atual da Carga", status_opcoes, index=0)
-            destino_final_input = st.text_input("Destino Final", value=st.session_state["val_destino"])
-            eta_input = st.text_input("Previsão de Chegada (ETA)", value=st.session_state["val_eta"])
-            door_ramp_input = st.text_input("Modalidade (DOOR/RAMP)", value=st.session_state["val_modalidade"])
+            destino_final_input = st.text_input("Destino Final", value="")
+            eta_input = st.text_input("Previsão de Chegada (ETA)", value="DD/MM/AAAA")
+            door_ramp_input = st.text_input("Modalidade (DOOR/RAMP", value="")
             
         st.markdown("<br>", unsafe_allow_html=True)
         col_btn1, col_btn2 = st.columns(2)
