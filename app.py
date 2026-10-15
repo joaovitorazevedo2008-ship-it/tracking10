@@ -95,7 +95,7 @@ Sua Equipe de Logística"""
                     "Status": status_input,
                     "E-mail Pronto": "Gerado"
                 }
-                global df_tracking
+                
                 df_tracking = pd.concat([df_tracking, pd.DataFrame([nova_linha])], ignore_index=True)
                 salvar_dados(df_tracking)
             else:
