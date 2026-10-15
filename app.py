@@ -176,7 +176,7 @@ if not st.session_state["autenticado"]:
 # --- BARRA LATERAL ---
 with st.sidebar:
     st.markdown("### 📖 Guia do Sistema")
-    st.markdown("**1️⃣ Upload de Booking:** Faça upload do PDF para preencher automaticamente processo (DC...), transbordo, destino e ETA.")
+    st.markdown("**1️⃣ Upload de Booking:** Faça upload do PDF para preencher automaticamente processo, transbordo, destino e ETA.")
     st.markdown("**2️⃣ Atualização:** Insira o contêiner e o status.")
     st.markdown("**3️⃣ Comunicação:** Salve e gere e-mails padronizados instantaneamente.")
     st.markdown("---")
@@ -293,60 +293,54 @@ with aba1:
                 for pagina in leitor.pages:
                     texto_pdf += pagina.extract_text() or ""
                 
-                # 1. Extrai Processo no formato DC seguido por números (ex: DC1000873)
-                match_dc = re.search(r'DC\d+', texto_pdf.upper())
+                # 1. Procura por referências que comecem por DC seguidas de números
+                match_dc = re.search(r'\b(DC\d+)\b', texto_pdf.upper())
                 if match_dc:
-                    st.session_state["auto_processo"] = match_dc.group(0)
+                    st.session_state["auto_processo"] = match_dc.group(1)
                 else:
-                    match_proc = re.search(r'Booking\s*\|\s*([A-Z0-9/]+)', texto_pdf)
-                    if match_proc:
-                        st.session_state["auto_processo"] = match_proc.group(1).strip()
+                    # Se não achar DC explícito, procura por Booking | SSZ/CHI...
+                    match_bkg = re.search(r'Booking\s*\|\s*([A-Z0-9/]+)', texto_pdf)
+                    if match_bkg:
+                        st.session_state["auto_processo"] = match_bkg.group(1).strip()
 
-                # 2. Extrai Porto de Loading / Origem (Ex: SANTOS)
+                # 2. Porto de Loading (Transbordo / Origem) - Ex: SANTOS
                 match_loading = re.search(r'Porto de Loading\s*\|\s*([A-Z\s,/-]+)', texto_pdf)
                 if match_loading:
                     st.session_state["auto_origem"] = match_loading.group(1).strip().split('\n')[0]
-                else:
-                    # Alternativa baseada no formato do PDF (Ex: SANTOS, SP / EMBRAPORT)
-                    if "SANTOS" in texto_pdf.upper():
-                        st.session_state["auto_origem"] = "SANTOS"
+                elif "SANTOS" in texto_pdf.upper():
+                    st.session_state["auto_origem"] = "SANTOS"
 
-                # 3. Extrai Destino Final (Ex: INDIANAPOLIS ou Port of Discharge)
+                # 3. Destino Final - Ex: INDIANAPOLIS
                 match_dest = re.search(r'Destino Final\s*\|\s*([A-Z\s,]+)', texto_pdf)
                 if match_dest:
-                    st.session_state["auto_dest"] = match_dest.group(1).strip().split('\n')[0]
-                    st.session_state["auto_destino"] = st.session_state["auto_dest"]
-                else:
-                    match_pod = re.search(r'Port of Discharge\s*\|\s*([A-Z\s,]+)', texto_pdf)
-                    if match_pod:
-                        st.session_state["auto_destino"] = match_pod.group(1).strip().split('\n')[0]
+                    st.session_state["auto_destino"] = match_dest.group(1).strip().split('\n')[0]
 
-                # 4. Extrai Datas (ETD e ETA)
+                # 4. Datas (ETD e ETA)
                 match_datas = re.findall(r'\d{2}/\d{2}/\d{4}', texto_pdf)
                 if match_datas:
                     if len(match_datas) >= 2:
-                        st.session_state["auto_data_origem"] = match_datas[0]  # ETD
-                        st.session_state["auto_eta"] = match_datas[-1]         # ETA
+                        st.session_state["auto_data_origem"] = match_datas[0]  # ETD / Transbordo
+                        st.session_state["auto_eta"] = match_datas[-1]         # ETA Destino
                     else:
                         st.session_state["auto_eta"] = match_datas[0]
 
-                # 5. Extrai Modalidade (Ex: Ramp / Door)
+                # 5. Modalidade - Ex: Ramp
                 if "Ramp" in texto_pdf:
                     st.session_state["auto_modalidade"] = "Ramp"
                 elif "Door" in texto_pdf:
                     st.session_state["auto_modalidade"] = "Door"
 
-                st.success("✨ Processo, transbordo, destinos e datas extraídos e aplicados com sucesso!")
+                st.success("✨ Processo, transbordo, destino e datas extraídos com sucesso do Booking!")
             except Exception as e:
                 st.error(f"Erro ao processar o PDF: {e}")
         st.markdown("---")
 
     with st.form("form_dados_carga"):
-        st.markdown("### 📝 Dados da Carga (Preenchidos pelo Booking ou Manuais)")
+        st.markdown("### 📝 Dados da Carga (Preenchidos automaticamente pelo PDF)")
         
         col1, col2 = st.columns(2)
         with col1:
-            processo_input = st.text_input("Nº do Processo / Referência (Ex: DC1000873)", value=st.session_state["auto_processo"])
+            processo_input = st.text_input("Nº do Processo / Referência", value=st.session_state["auto_processo"])
             container_input = st.text_input("Nº do Contêiner", value="", help="Formato ex.: HAMU181362 ou MSCU1234567")
             porto_transbordo_input = st.text_input("Porto de Transbordo / Origem", value=st.session_state["auto_origem"])
             data_transbordo_input = st.text_input("Data no Transbordo", value=st.session_state["auto_data_origem"])
