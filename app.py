@@ -2,6 +2,14 @@ import streamlit as st
 import pandas as pd
 import os
 from datetime import datetime, date
+import re
+
+# Tenta importar a biblioteca de leitura de PDF
+try:
+    from pypdf import PdfReader
+    has_pypdf = True
+except ImportError:
+    has_pypdf = False
 
 # Configuração inicial da página com tema forçado para claro
 st.set_page_config(
@@ -168,8 +176,8 @@ if not st.session_state["autenticado"]:
 # --- BARRA LATERAL ---
 with st.sidebar:
     st.markdown("### 📖 Guia do Sistema")
-    st.markdown("**1️⃣ Anexo de Booking:** Anexe o print ou documento do Booking para consulta.")
-    st.markdown("**2️⃣ Atualização:** Insira o processo, o contêiner e os dados logísticos.")
+    st.markdown("**1️⃣ Upload do Booking:** Anexe o PDF do Booking para preencher automaticamente processo, transbordo, destino e ETA.")
+    st.markdown("**2️⃣ Atualização:** Insira o contêiner e o status.")
     st.markdown("**3️⃣ Comunicação:** Salve e gere e-mails padronizados instantaneamente.")
     st.markdown("---")
     if st.button("🚪 Encerrar Sessão"):
@@ -264,27 +272,73 @@ if not df_tracking.empty:
             
     st.markdown("<br>", unsafe_allow_html=True)
 
-aba1, aba2, aba3 = st.tabs(["🚀 1. Registo e Anexo de Booking", "📋 2. Histórico Consolidado e Filtros", "✏️ 3. Edição Rápida"])
+aba1, aba2, aba3 = st.tabs(["🚀 1. Automação por Booking e Registo", "📋 2. Histórico Consolidado e Filtros", "✏️ 3. Edição Rápida"])
 
 with aba1:
-    st.markdown("### 📄 Anexo de Booking para Consulta")
+    st.markdown("### 📄 Leitura Automática de Booking (PDF)")
     
-    # Campo para anexar o print ou documento PDF do Booking
-    arquivo_booking = st.file_uploader("Anexe o documento ou print do Booking (PDF, PNG, JPG)", type=["pdf", "png", "jpg", "jpeg"])
-    if arquivo_booking is not None:
-        st.success("✨ Booking anexado com sucesso para referência visual!")
-    
-    st.markdown("---")
+    if "auto_processo" not in st.session_state: st.session_state["auto_processo"] = ""
+    if "auto_destino" not in st.session_state: st.session_state["auto_destino"] = ""
+    if "auto_eta" not in st.session_state: st.session_state["auto_eta"] = ""
+    if "auto_modalidade" not in st.session_state: st.session_state["auto_modalidade"] = ""
+    if "auto_origem" not in st.session_state: st.session_state["auto_origem"] = ""
+    if "auto_data_origem" not in st.session_state: st.session_state["auto_data_origem"] = ""
+
+    if has_pypdf:
+        arquivo_pdf = st.file_uploader("Faça o upload do Booking em PDF para preenchimento automático", type=["pdf"])
+        if arquivo_pdf is not None:
+            try:
+                leitor = PdfReader(arquivo_pdf)
+                texto_pdf = ""
+                for pagina in leitor.pages:
+                    texto_pdf += pagina.extract_text() or ""
+                
+                # 1. Extrai Referência do Booking (Ex: SSZ/CHI/1295477)
+                match_bkg = re.search(r'Booking\s*\|\s*([A-Z0-9/]+)', texto_pdf)
+                if match_bkg:
+                    st.session_state["auto_processo"] = match_bkg.group(1).strip()
+                
+                # 2. Extrai Porto de Origem / Transbordo (Ex: SANTOS / EMBRAPORT)
+                match_loading = re.search(r'Porto de Loading\s*\|\s*([A-Z\s,/-]+)', texto_pdf)
+                if match_loading:
+                    st.session_state["auto_origem"] = match_loading.group(1).strip().split('\n')[0]
+                elif "SANTOS" in texto_pdf.upper():
+                    st.session_state["auto_origem"] = "SANTOS, SP"
+
+                # 3. Extrai Destino Final (Ex: INDIANAPOLIS)
+                match_dest = re.search(r'Destino Final\s*\|\s*([A-Z\s,]+)', texto_pdf)
+                if match_dest:
+                    st.session_state["auto_destino"] = match_dest.group(1).strip().split('\n')[0]
+
+                # 4. Extrai Datas (ETD e ETA)
+                match_datas = re.findall(r'\d{2}/\d{2}/\d{4}', texto_pdf)
+                if match_datas:
+                    if len(match_datas) >= 2:
+                        st.session_state["auto_data_origem"] = match_datas[0]  # ETD / Transbordo
+                        st.session_state["auto_eta"] = match_datas[-1]         # ETA Destino
+                    else:
+                        st.session_state["auto_eta"] = match_datas[0]
+
+                # 5. Extrai Modalidade (Ramp / Door)
+                if "Ramp" in texto_pdf:
+                    st.session_state["auto_modalidade"] = "RAMP"
+                elif "Door" in texto_pdf:
+                    st.session_state["auto_modalidade"] = "DOOR"
+
+                st.success("✨ Dados do Booking extraídos e preenchidos automaticamente com sucesso!")
+            except Exception as e:
+                st.error(f"Erro ao processar o PDF: {e}")
+        st.markdown("---")
 
     with st.form("form_dados_carga"):
         st.markdown("### 📝 Dados da Carga")
         
         col1, col2 = st.columns(2)
         with col1:
-            processo_input = st.text_input("Nº do Processo / Referência", value="")
+            processo_input = st.text_input("Nº do Processo / Referência", value=st.session_state["auto_processo"])
             container_input = st.text_input("Nº do Contêiner", value="", help="Formato ex.: HAMU181362 ou MSCU1234567")
-            porto_transbordo_input = st.text_input("Porto de Transbordo / Origem", value="")
-            data_transbordo_input = st.text_input("Data no Transbordo", value="")
+            porto_transbordo_input = st.text_input("Porto de Transbordo / Origem", value=st.session_state["auto_origem"])
+            data_transbordo_input = st.text_input("Data no Transbordo", value=st.session_state["auto_data_origem"])
             
         with col2:
             status_opcoes = [
@@ -298,9 +352,9 @@ with aba1:
                 "Disponível para Retirada"
             ]
             status_input = st.selectbox("Status Atual da Carga", status_opcoes, index=0)
-            destino_final_input = st.text_input("Destino Final", value="")
-            eta_input = st.text_input("Previsão de Chegada (ETA)", value="DD/MM/AAAA")
-            door_ramp_input = st.text_input("Modalidade (DOOR/RAMP", value="")
+            destino_final_input = st.text_input("Destino Final", value=st.session_state["auto_destino"])
+            eta_input = st.text_input("Previsão de Chegada (ETA)", value=st.session_state["auto_eta"] if st.session_state["auto_eta"] else "DD/MM/AAAA")
+            door_ramp_input = st.text_input("Modalidade (DOOR/RAMP)", value=st.session_state["auto_modalidade"])
             
         st.markdown("<br>", unsafe_allow_html=True)
         col_btn1, col_btn2 = st.columns(2)
