@@ -168,7 +168,7 @@ if not st.session_state["autenticado"]:
 # --- BARRA LATERAL ---
 with st.sidebar:
     st.markdown("### 📖 Guia do Sistema")
-    st.markdown("**1️⃣ Preenchimento Rápido:** Utilize o botão de preenchimento automático com base no Booking Rexnord ou preencha os dados.")
+    st.markdown("**1️⃣ Anexo de Booking:** Anexe o print/documento do Booking e utilize o preenchimento rápido.")
     st.markdown("**2️⃣ Atualização:** Insira o contêiner e o status.")
     st.markdown("**3️⃣ Comunicação:** Salve e gere e-mails padronizados instantaneamente.")
     st.markdown("---")
@@ -264,10 +264,15 @@ if not df_tracking.empty:
             
     st.markdown("<br>", unsafe_allow_html=True)
 
-aba1, aba2, aba3 = st.tabs(["🚀 1. Registo e Preenchimento", "📋 2. Histórico Consolidado e Filtros", "✏️ 3. Edição Rápida"])
+aba1, aba2, aba3 = st.tabs(["🚀 1. Registo e Anexo de Booking", "📋 2. Histórico Consolidado e Filtros", "✏️ 3. Edição Rápida"])
 
 with aba1:
-    st.markdown("### ⚡ Preenchimento Rápido por Booking")
+    st.markdown("### 📄 Anexo e Preenchimento por Booking")
+    
+    # Campo para anexar o print ou documento PDF do Booking
+    arquivo_booking = st.file_uploader("Anexe o documento ou print do Booking (PDF, PNG, JPG)", type=["pdf", "png", "jpg", "jpeg"])
+    if arquivo_booking is not None:
+        st.success("✨ Booking anexado com sucesso para referência visual!")
     
     if st.button("📥 Preencher com Dados do Booking Rexnord Exemplo"):
         st.session_state["val_proc"] = "SSZ/CHI/1295477"
@@ -276,7 +281,7 @@ with aba1:
         st.session_state["val_destino"] = "INDIANAPOLIS"
         st.session_state["val_eta"] = "05/11/2026"
         st.session_state["val_modalidade"] = "RAMP"
-        st.success("✨ Dados do Booking Rexnord aplicados com sucesso nos campos abaixo!")
+        st.success("✨ Dados preenchidos com base no Booking!")
         st.rerun()
 
     for k, v in [("val_proc", ""), ("val_origem", ""), ("val_data_origem", ""), ("val_destino", ""), ("val_eta", "DD/MM/AAAA"), ("val_modalidade", "")]:
