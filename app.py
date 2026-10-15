@@ -2,14 +2,6 @@ import streamlit as st
 import pandas as pd
 import os
 from datetime import datetime, date
-import re
-
-# Tenta importar a biblioteca de leitura de PDF
-try:
-    from pypdf import PdfReader
-    has_pypdf = True
-except ImportError:
-    has_pypdf = False
 
 # Configuração inicial da página com tema forçado para claro
 st.set_page_config(
@@ -176,7 +168,7 @@ if not st.session_state["autenticado"]:
 # --- BARRA LATERAL ---
 with st.sidebar:
     st.markdown("### 📖 Guia do Sistema")
-    st.markdown("**1️⃣ Upload de Booking:** Faça upload do PDF do Booking para preencher automaticamente o processo (DC...), transbordo, destino e ETA.")
+    st.markdown("**1️⃣ Preenchimento Rápido:** Utilize o botão de preenchimento automático com base no Booking Rexnord ou preencha os dados.")
     st.markdown("**2️⃣ Atualização:** Insira o contêiner e o status.")
     st.markdown("**3️⃣ Comunicação:** Salve e gere e-mails padronizados instantaneamente.")
     st.markdown("---")
@@ -272,78 +264,36 @@ if not df_tracking.empty:
             
     st.markdown("<br>", unsafe_allow_html=True)
 
-aba1, aba2, aba3 = st.tabs(["🚀 1. Automação por Booking e Atualização", "📋 2. Histórico Consolidado e Filtros", "✏️ 3. Edição Rápida"])
+aba1, aba2, aba3 = st.tabs(["🚀 1. Registo e Preenchimento", "📋 2. Histórico Consolidado e Filtros", "✏️ 3. Edição Rápida"])
 
+aba1:
 with aba1:
-    st.markdown("### 📄 Automação Inteligente por Booking (PDF)")
+    st.markdown("### ⚡ Preenchimento Rápido por Booking")
     
-    if "auto_processo" not in st.session_state: st.session_state["auto_processo"] = ""
-    if "auto_destino" not in st.session_state: st.session_state["auto_destino"] = ""
-    if "auto_eta" not in st.session_state: st.session_state["auto_eta"] = ""
-    if "auto_modalidade" not in st.session_state: st.session_state["auto_modalidade"] = ""
-    if "auto_origem" not in st.session_state: st.session_state["auto_origem"] = ""
-    if "auto_data_origem" not in st.session_state: st.session_state["auto_data_origem"] = ""
+    # Botão de Atalho para carregar o modelo Rexnord que você enviou
+    if st.button("📥 Preencher com Dados do Booking Rexnord Exemplo"):
+        st.session_state["val_proc"] = "SSZ/CHI/1295477"
+        st.session_state["val_origem"] = "SANTOS (EMBRAPORT)"
+        st.session_state["val_data_origem"] = "11/10/2026"
+        st.session_state["val_destino"] = "INDIANAPOLIS"
+        st.session_state["val_eta"] = "05/11/2026"
+        st.session_state["val_modalidade"] = "RAMP"
+        st.success("✨ Dados do Booking Rexnord aplicados com sucesso nos campos abaixo!")
+        st.rerun()
 
-    if has_pypdf:
-        arquivo_pdf = st.file_uploader("Faça o upload do Booking em PDF para preenchimento automático", type=["pdf"])
-        if arquivo_pdf is not None:
-            try:
-                leitor = PdfReader(arquivo_pdf)
-                texto_pdf = ""
-                for pagina in leitor.pages:
-                    texto_pdf += pagina.extract_text() or ""
-                
-                # 1. Extração do Processo (Procura por padrão DC seguido de números, ex: DC1000873)
-                match_dc = re.search(r'\b(DC\d+)\b', texto_pdf.upper())
-                if match_dc:
-                    st.session_state["auto_processo"] = match_dc.group(1)
-                else:
-                    # Se não encontrar DC, procura logo após a palavra Booking
-                    match_bkg = re.search(r'Booking\s*\|\s*([A-Z0-9/]+)', texto_pdf)
-                    if match_bkg:
-                        st.session_state["auto_processo"] = match_bkg.group(1).strip()
-
-                # 2. Extração do Porto de Transbordo / Origem (Ex: SANTOS / EMBRAPORT)
-                match_loading = re.search(r'Porto de Loading\s*\|\s*([A-Z\s,/-]+)', texto_pdf)
-                if match_loading:
-                    st.session_state["auto_origem"] = match_loading.group(1).strip().split('\n')[0]
-                elif "SANTOS" in texto_pdf.upper():
-                    st.session_state["auto_origem"] = "SANTOS"
-
-                # 3. Extraição do Destino Final (Ex: INDIANAPOLIS)
-                match_dest = re.search(r'Destino Final\s*\|\s*([A-Z\s,]+)', texto_pdf)
-                if match_dest:
-                    st.session_state["auto_destino"] = match_dest.group(1).strip().split('\n')[0]
-
-                # 4. Extração de Datas (ETD e ETA)
-                match_datas = re.findall(r'\d{2}/\d{2}/\d{4}', texto_pdf)
-                if match_datas:
-                    if len(match_datas) >= 2:
-                        st.session_state["auto_data_origem"] = match_datas[0]  # Data Transbordo / ETD
-                        st.session_state["auto_eta"] = match_datas[-1]         # ETA Destino
-                    else:
-                        st.session_state["auto_eta"] = match_datas[0]
-
-                # 5. Extração da Modalidade (Ex: Ramp / Door)
-                if "Ramp" in texto_pdf:
-                    st.session_state["auto_modalidade"] = "Ramp"
-                elif "Door" in texto_pdf:
-                    st.session_state["auto_modalidade"] = "Door"
-
-                st.success("✨ Processo (DC...), transbordo, destino e datas preenchidos automaticamente do Booking com sucesso!")
-            except Exception as e:
-                st.error(f"Erro ao processar o PDF: {e}")
-        st.markdown("---")
+    # Inicializa os valores na sessão caso estejam vazios
+    for k, v in [("val_proc", ""), ("val_origem", ""), ("val_data_origem", ""), ("val_destino", ""), ("val_eta", "DD/MM/AAAA"), ("val_modalidade", "")]:
+        if k not in st.session_state: st.session_state[k] = v
 
     with st.form("form_dados_carga"):
-        st.markdown("### 📝 Dados da Carga (Preenchidos automaticamente pelo PDF)")
+        st.markdown("### 📝 Dados da Carga")
         
         col1, col2 = st.columns(2)
         with col1:
-            processo_input = st.text_input("Nº do Processo / Referência (Ex: DC1000873)", value=st.session_state["auto_processo"])
+            processo_input = st.text_input("Nº do Processo / Referência", value=st.session_state["val_proc"])
             container_input = st.text_input("Nº do Contêiner", value="", help="Formato ex.: HAMU181362 ou MSCU1234567")
-            porto_transbordo_input = st.text_input("Porto de Transbordo / Origem", value=st.session_state["auto_origem"])
-            data_transbordo_input = st.text_input("Data no Transbordo", value=st.session_state["auto_data_origem"])
+            porto_transbordo_input = st.text_input("Porto de Transbordo / Origem", value=st.session_state["val_origem"])
+            data_transbordo_input = st.text_input("Data no Transbordo", value=st.session_state["val_data_origem"])
             
         with col2:
             status_opcoes = [
@@ -357,9 +307,9 @@ with aba1:
                 "Disponível para Retirada"
             ]
             status_input = st.selectbox("Status Atual da Carga", status_opcoes, index=0)
-            destino_final_input = st.text_input("Destino Final", value=st.session_state["auto_destino"])
-            eta_input = st.text_input("Previsão de Chegada (ETA)", value=st.session_state["auto_eta"] if st.session_state["auto_eta"] else "DD/MM/AAAA")
-            door_ramp_input = st.text_input("Modalidade (DOOR/RAMP)", value=st.session_state["auto_modalidade"])
+            destino_final_input = st.text_input("Destino Final", value=st.session_state["val_destino"])
+            eta_input = st.text_input("Previsão de Chegada (ETA)", value=st.session_state["val_eta"])
+            door_ramp_input = st.text_input("Modalidade (DOOR/RAMP)", value=st.session_state["val_modalidade"])
             
         st.markdown("<br>", unsafe_allow_html=True)
         col_btn1, col_btn2 = st.columns(2)
