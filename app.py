@@ -5,17 +5,12 @@ import os
 # Configuração inicial da página
 st.set_page_config(page_title="Rastreamento de Contêineres", page_icon="⚓", layout="wide", initial_sidebar_state="expanded")
 
-# --- DESIGN CUSTOMIZADO E DIDÁTICO (AZUL, AMARELO E BRANCO) ---
+# --- DESIGN CUSTOMIZADO SEGURO E BONITO (AZUL, AMARELO E BRANCO) ---
 st.markdown("""
     <style>
-    /* Cor de fundo principal Branca */
+    /* Fundo da aplicação Branco */
     .stApp {
         background-color: #FFFFFF;
-    }
-    
-    /* Textos Gerais em Azul Escuro */
-    .stApp, p, span, div, label {
-        color: #003366 !important;
     }
     
     /* Títulos em Azul Escuro */
@@ -37,7 +32,6 @@ st.markdown("""
     button[kind="primary"]:hover {
         background-color: #FFD633 !important;
         transform: scale(1.02);
-        box-shadow: 0px 4px 15px rgba(255, 192, 0, 0.4);
     }
     
     /* Botão Secundário (Azul Escuro com texto Branco) */
@@ -53,25 +47,11 @@ st.markdown("""
         background-color: #004C99 !important;
         color: #FFFFFF !important;
         transform: scale(1.02);
-        box-shadow: 0px 4px 15px rgba(0, 51, 102, 0.3);
-    }
-
-    /* Campos de Input (Borda Azul, Fundo Branco) */
-    .stTextInput input, .stSelectbox div[data-baseweb="select"] {
-        border: 1px solid #003366 !important;
-        border-radius: 6px !important;
-        background-color: #F8FAFC !important;
-        color: #003366 !important;
     }
 
     /* Abas Superiores */
     .stTabs [data-baseweb="tab-list"] {
-        background-color: #FFFFFF;
-        border-bottom: 2px solid #FFC000;
-    }
-    .stTabs [data-baseweb="tab"] {
-        color: #003366;
-        font-weight: bold;
+        border-bottom: 3px solid #FFC000;
     }
     .stTabs [aria-selected="true"] {
         background-color: #003366 !important;
@@ -79,29 +59,14 @@ st.markdown("""
         border-radius: 8px 8px 0 0 !important;
     }
 
-    /* Cartão do Formulário */
-    [data-testid="stForm"] {
-        background-color: #FFFFFF;
-        padding: 20px;
-        border-radius: 10px;
-        box-shadow: 0px 4px 10px rgba(0, 51, 102, 0.1);
-        border: 1px solid #E2E8F0;
-        border-left: 5px solid #003366;
-    }
-
-    /* Barra Lateral (Sidebar) Azul Escura */
+    /* Barra Lateral Clara (Para não bugar o texto) */
     [data-testid="stSidebar"] {
-        background-color: #003366 !important;
-    }
-    [data-testid="stSidebar"] * {
-        color: #FFFFFF !important;
+        background-color: #F4F7F9 !important;
     }
     
     /* Alertas Sucesso/Info com detalhe amarelo */
     [data-testid="stAlert"] {
-        background-color: #F8FAFC !important;
         border-left: 5px solid #FFC000 !important;
-        color: #003366 !important;
         box-shadow: 0px 2px 4px rgba(0,0,0,0.05);
     }
     </style>
@@ -113,7 +78,7 @@ if "autenticado" not in st.session_state:
     st.session_state["autenticado"] = False
 
 if not st.session_state["autenticado"]:
-    st.markdown("<h1 style='text-align: center; color: #003366;'>⚓ LOGIN TRACKING</h1>", unsafe_allow_html=True)
+    st.markdown("<h1 style='text-align: center;'>⚓ LOGIN TRACKING</h1>", unsafe_allow_html=True)
     st.markdown("<p style='text-align: center;'>Bem-vindo(a)! Insira suas credenciais para continuar.</p>", unsafe_allow_html=True)
     
     col1, col2, col3 = st.columns([1, 1, 1])
@@ -132,16 +97,14 @@ if not st.session_state["autenticado"]:
     st.stop()
 # ------------------------
 
-# --- BARRA LATERAL (TUTORIAL DIDÁTICO) ---
+# --- BARRA LATERAL DIDÁTICA ---
 with st.sidebar:
-    st.title("⚓ DC Tracking")
-    st.markdown("---")
     st.markdown("### 📖 Como usar?")
     st.markdown("**1️⃣ Busca Inteligente:** Digite o número do contêiner e tecle `ENTER`. O sistema preenche o histórico se já existir.")
     st.markdown("**2️⃣ Preencha os Dados:** Atualize datas, status e destinos conforme a situação atual da carga.")
     st.markdown("**3️⃣ Geração de E-mail:** Escolha se quer apenas registrar no sistema ou se deseja gerar o texto pronto para enviar ao cliente.")
     st.markdown("---")
-    st.info("💡 **Dica:** Passe o mouse sobre os ícones de interrogação (?) nos campos para ajuda.")
+    st.info("💡 **Dica:** Passe o mouse sobre os ícones de interrogação (?) nos campos para ver orientações sobre o preenchimento.")
     st.write("")
     st.write("")
     if st.button("🚪 Sair do Sistema"):
@@ -194,13 +157,14 @@ def salvar_dados(df):
 
 df_tracking = carregar_dados()
 
-st.title("Gestão de Rastreamento - Painel Principal")
+st.title("⚓ RASTREAMENTO DE CONTÊINERES")
 
 aba1, aba2, aba3 = st.tabs(["🚀 1. Atualizar Carga / Gerar E-mail", "📋 2. Histórico Geral", "✏️ 3. Edição Rápida de Dados"])
 
 with aba1:
-    st.markdown("### 🔍 Etapa 1: Identificação do Contêiner")
-    container_input = st.text_input("Digite o Nº do Contêiner e aperte ENTER", help="Exemplo: MSCU1234567. O sistema buscará automaticamente o armador e o histórico desta carga.").strip().upper()
+    st.info("💡 **DICA:** Digite o número do contêiner abaixo e pressione **ENTER**. O sistema buscará o histórico e preencherá tudo automaticamente para você!")
+    
+    container_input = st.text_input("🔍 Digite o Nº do Contêiner (Ex: MSCU1234567)").strip().upper()
     
     def_proc = ""
     def_porto = ""
@@ -237,12 +201,12 @@ with aba1:
             status_salvo = str(ultimo_reg.get("Status", ""))
             if status_salvo in status_opcoes: def_status = status_salvo
             
-            st.success(f"✨ Histórico localizado! Preenchemos os campos abaixo com base na última atualização deste contêiner.")
+            st.success(f"✨ Histórico localizado! Preenchemos os campos com a última atualização.")
 
     idx_status = status_opcoes.index(def_status)
 
     with st.form("form_dados_carga"):
-        st.markdown("### 📝 Etapa 2: Preenchimento de Dados")
+        st.markdown("### 📝 Dados e Status da Carga")
         
         col1, col2 = st.columns(2)
         with col1:
@@ -256,11 +220,10 @@ with aba1:
             eta_input = st.text_input("Previsão de Chegada (ETA)", value=def_eta, help="Formato DD/MM/AAAA. Deixe em branco se a confirmar.")
             door_ramp_input = st.text_input("Modalidade (DOOR/RAMP)", value=def_door, help="Opcional. Informe a modalidade caso aplicável.")
             
-        st.markdown("### 🚀 Etapa 3: Ação")
-        st.markdown("Escolha se deseja apenas salvar os dados no sistema ou se também quer o texto do e-mail pronto para o cliente.")
+        st.markdown("### 🚀 Ação")
         col_btn1, col_btn2 = st.columns(2)
         with col_btn1:
-            btn_analisar = st.form_submit_button("Salvar Somente")
+            btn_analisar = st.form_submit_button("Apenas Salvar Dados")
         with col_btn2:
             btn_email = st.form_submit_button("Gerar E-mail p/ Cliente", type="primary")
     
@@ -307,7 +270,7 @@ with aba1:
             df_tracking = pd.concat([df_tracking, pd.DataFrame([nova_linha])], ignore_index=True)
             salvar_dados(df_tracking)
             
-            st.info(f"⛴️ **Armador Identificado:** {armador_encontrado} | [Abrir site oficial do rastreamento]({link_direto})")
+            st.info(f"⛴️ **Armador Identificado:** {armador_encontrado} | [Acessar rastreamento oficial]({link_direto})")
             
             if btn_email:
                 st.text_area("📋 Texto Pronto para Copiar:", value=corpo_email, height=150)
@@ -324,8 +287,7 @@ with aba1:
             st.error("⚠️ Por favor, informe o número do contêiner antes de prosseguir.")
 
 with aba2:
-    st.subheader("Visualização da Base Completa")
-    st.markdown("Abaixo estão todos os contêineres e processos atualizados recentemente.")
+    st.subheader("Base Geral de Dados")
     if df_tracking.empty:
         st.info("Nenhum registro encontrado.")
     else:
@@ -336,14 +298,21 @@ with aba2:
             st.rerun()
 
 with aba3:
-    st.subheader("Edição Rápida")
-    st.markdown("Dê um **duplo clique** na célula que deseja alterar e digite a nova informação. Depois, clique no botão **Salvar Modificações** para guardar permanentemente.")
+    st.subheader("Edição Rápida (Apenas Status Atual)")
+    st.markdown("Abaixo você vê **apenas a última atualização** de cada contêiner para não poluir a tela. Dê um **duplo clique** para editar e salve.")
     
     if df_tracking.empty:
         st.info("Não há dados para editar.")
     else:
-        df_editado = st.data_editor(df_tracking, use_container_width=True, num_rows="dynamic")
+        # Filtra a base para mostrar apenas o registro mais recente de cada contêiner
+        df_latest = df_tracking.drop_duplicates(subset=['Container'], keep='last')
+        
+        # Mostra o editor bloqueando adição de novas linhas para manter a integridade
+        df_editado = st.data_editor(df_latest, use_container_width=True)
+        
         if st.button("💾 Salvar Modificações", type="primary"):
-            salvar_dados(df_editado)
+            # Atualiza o dataframe original apenas com as linhas que foram editadas
+            df_tracking.update(df_editado)
+            salvar_dados(df_tracking)
             st.success("Dados salvos e atualizados no banco!")
             st.rerun()
