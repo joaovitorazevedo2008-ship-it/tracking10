@@ -176,8 +176,8 @@ if not st.session_state["autenticado"]:
 # --- BARRA LATERAL ---
 with st.sidebar:
     st.markdown("### 📖 Guia do Sistema")
-    st.markdown("**1️⃣ Upload de Booking:** Faça upload do PDF para preencher automaticamente destino, ETA e portos.")
-    st.markdown("**2️⃣ Atualização:** Insira a referência, o contêiner e o status.")
+    st.markdown("**1️⃣ Upload de Booking:** Faça upload do PDF para preencher automaticamente processo (DC...), transbordo, destino e ETA.")
+    st.markdown("**2️⃣ Atualização:** Insira o contêiner e o status.")
     st.markdown("**3️⃣ Comunicação:** Salve e gere e-mails padronizados instantaneamente.")
     st.markdown("---")
     if st.button("🚪 Encerrar Sessão"):
@@ -277,12 +277,12 @@ aba1, aba2, aba3 = st.tabs(["🚀 1. Automação por Booking e Atualização", "
 with aba1:
     st.markdown("### 📄 Automação Inteligente por Booking (PDF)")
     
-    # Inicializa variáveis de estado para o auto-preenchimento
     if "auto_processo" not in st.session_state: st.session_state["auto_processo"] = ""
     if "auto_destino" not in st.session_state: st.session_state["auto_destino"] = ""
     if "auto_eta" not in st.session_state: st.session_state["auto_eta"] = ""
     if "auto_modalidade" not in st.session_state: st.session_state["auto_modalidade"] = ""
     if "auto_origem" not in st.session_state: st.session_state["auto_origem"] = ""
+    if "auto_data_origem" not in st.session_state: st.session_state["auto_data_origem"] = ""
 
     if has_pypdf:
         arquivo_pdf = st.file_uploader("Faça o upload do Booking em PDF para preenchimento automático", type=["pdf"])
@@ -293,29 +293,42 @@ with aba1:
                 for pagina in leitor.pages:
                     texto_pdf += pagina.extract_text() or ""
                 
-                # Extrai Booking / Processo (Ex: SSZ/CHI/1295477)
-                match_proc = re.search(r'Booking\s*\|\s*([A-Z0-9/]+)', texto_pdf)
-                if match_proc:
-                    st.session_state["auto_processo"] = match_proc.group(1).strip()
-                
-                # Extrai Destino Final (Ex: INDIANAPOLIS)
+                # 1. Extrai Processo no formato DC seguido por números (ex: DC1000873)
+                match_dc = re.search(r'DC\d+', texto_pdf.upper())
+                if match_dc:
+                    st.session_state["auto_processo"] = match_dc.group(0)
+                else:
+                    # Alternativa: se não achar DC exato, procura por booking ou referência geral
+                    match_proc = re.search(r'Booking\s*\|\s*([A-Z0-9/]+)', texto_pdf)
+                    if match_proc:
+                        st.session_state["auto_processo"] = match_proc.group(1).strip()
+
+                # 2. Extrai Porto de Origem / Transbordo (Ex: SANTOS, SP)
+                match_origem = re.search(r'Porto de Loading\s*\|\s*([A-Z\s,/-]+)', texto_pdf)
+                if match_origem:
+                    st.session_state["auto_origem"] = match_origem.group(1).strip().split('\n')[0]
+
+                # 3. Extrai Destino Final (Ex: INDIANAPOLIS)
                 match_dest = re.search(r'Destino Final\s*\|\s*([A-Z\s,]+)', texto_pdf)
                 if match_dest:
                     st.session_state["auto_destino"] = match_dest.group(1).strip().split('\n')[0]
                 
-                # Extrai ETA (Procura por datas no formato DD/MM/AAAA)
-                match_etas = re.findall(r'\d{2}/\d{2}/\d{4}', texto_pdf)
-                if match_etas:
-                    # Pega a última data válida encontrada no booking como ETA final
-                    st.session_state["auto_eta"] = match_etas[-1]
+                # 4. Extrai Datas (ETD e ETA)
+                match_datas = re.findall(r'\d{2}/\d{2}/\d{4}', texto_pdf)
+                if match_datas:
+                    if len(match_datas) >= 2:
+                        st.session_state["auto_data_origem"] = match_datas[0]  # ETD / Data Transbordo
+                        st.session_state["auto_eta"] = match_datas[-1]         # ETA Destino
+                    else:
+                        st.session_state["auto_eta"] = match_datas[0]
 
-                # Extrai Modalidade (Ex: Ramp)
+                # 5. Extrai Modalidade (Ex: Ramp)
                 if "Ramp" in texto_pdf:
                     st.session_state["auto_modalidade"] = "Ramp"
                 elif "Door" in texto_pdf:
                     st.session_state["auto_modalidade"] = "Door"
 
-                st.success("✨ Dados extraídos com sucesso do PDF e aplicados abaixo automaticamente!")
+                st.success("✨ Processo, transbordo, destinos e datas preenchidos automaticamente do PDF!")
             except Exception as e:
                 st.error(f"Erro ao processar o PDF: {e}")
         st.markdown("---")
@@ -325,10 +338,10 @@ with aba1:
         
         col1, col2 = st.columns(2)
         with col1:
-            processo_input = st.text_input("Nº do Processo / Referência", value=st.session_state["auto_processo"])
+            processo_input = st.text_input("Nº do Processo / Referência (Ex: DC1000873)", value=st.session_state["auto_processo"])
             container_input = st.text_input("Nº do Contêiner", value="", help="Formato ex.: HAMU181362 ou MSCU1234567")
             porto_transbordo_input = st.text_input("Porto de Transbordo / Origem", value=st.session_state["auto_origem"])
-            data_transbordo_input = st.text_input("Data no Transbordo", value="")
+            data_transbordo_input = st.text_input("Data no Transbordo", value=st.session_state["auto_data_origem"])
             
         with col2:
             status_opcoes = [
@@ -439,7 +452,7 @@ with aba2:
         
         col_f1, col_f2 = st.columns([2, 1])
         with col_f2:
-            if st.button("🗑️ Limpar Todos os Registros"):
+            if st.button("🗑️ Limpar Todos los Registros"):
                 if os.path.exists(ARQUIVO_DADOS):
                     os.remove(ARQUIVO_DADOS)
                 st.rerun()
