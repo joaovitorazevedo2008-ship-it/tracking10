@@ -99,50 +99,111 @@ with aba1:
             data_transbordo_input = st.text_input("Data de Chegada no Transbordo (Opcional)")
         with col2:
             status_input = st.selectbox("Status Atual", [
-                "Em trânsito", 
-                "Liberado na Alfândega", 
-                "Disponível para Retirada", 
                 "Embarcado",
-                "Em desova no porto de transbordo"
+                "Em trânsito", 
+                "Em desova no porto de transbordo",
+                "Liberado na Alfândega", 
+                "Disponível para Retirada"
             ])
             destino_final_input = st.text_input("Destino Final")
             eta_input = st.text_input("Previsão de Chegada (ETA) no Destino Final", value="DD/MM/AAAA")
             door_ramp_input = st.text_input("DOOR/RAMP (Opcional)")
             
-        # Botões lado a lado
         col_btn1, col_btn2 = st.columns(2)
         with col_btn1:
             btn_analisar = st.form_submit_button("Identificar Armador")
         with col_btn2:
             btn_email = st.form_submit_button("✉️ Gerar E-mail")
         
-        # Se qualquer um dos botões for clicado, o sistema processa a carga
         if btn_analisar or btn_email:
             if container_input:
                 armador_encontrado, link_direto = identificar_armador(container_input)
                 
+                # Variáveis auxiliares para montar o texto de forma natural
                 texto_transbordo = ""
-                if porto_transbordo_input or data_transbordo_input:
-                    porto = porto_transbordo_input if porto_transbordo_input else "porto de transbordo"
-                    data = f" no dia {data_transbordo_input}" if data_transbordo_input else ""
-                    texto_transbordo = f" Vale lembrar que a carga passará por {porto}{data}."
+                if porto_transbordo_input:
+                    data_t = f" no dia {data_transbordo_input}" if data_transbordo_input else ""
+                    texto_transbordo = f" Lembramos que a carga tem passagem prevista pelo porto de transbordo ({porto_transbordo_input}){data_t}."
 
                 local_destino = f" em {destino_final_input}" if destino_final_input else ""
                 modalidade_door = f" (Modalidade: {door_ramp_input})" if door_ramp_input else ""
 
-                corpo_email = f"""Olá! Tudo bem?
+                # --- LÓGICA DE E-MAILS SEPARADOS POR STATUS ---
+                if status_input == "Embarcado":
+                    corpo_email = f"""Prezado cliente,
 
-Passando para te atualizar sobre o andamento da sua carga referente ao processo {processo_input} (Contêiner {container_input.upper()}).
+Informamos que a sua carga referente ao processo {processo_input} (Contêiner: {container_input.upper()}) foi embarcada com sucesso na origem. 
 
-Neste momento, o status da carga consta como: "{status_input}". A nossa previsão atualizada é que ela chegue ao destino final{local_destino} na data de {eta_input}{modalidade_door}.{texto_transbordo}
+A previsão atualizada de chegada (ETA) ao destino final{local_destino} é para a data de {eta_input}{modalidade_door}.{texto_transbordo}
 
-Para acompanhar as movimentações em tempo real, você pode acessar diretamente o link de rastreio do armador abaixo:
+Para acompanhar as movimentações do navio em tempo real, acesse o rastreamento oficial através do link abaixo:
 {link_direto}
 
-Qualquer dúvida, a nossa equipe segue totalmente à disposição!
+Qualquer dúvida, a nossa equipe está à disposição!
 
-Um abraço,
+Atenciosamente,
 Equipe DC Logistics Brasil"""
+
+                elif status_input == "Em trânsito":
+                    corpo_email = f"""Prezado cliente,
+
+Gostaríamos de atualizar que a carga do processo {processo_input} (Contêiner: {container_input.upper()}) segue sua viagem normalmente e encontra-se em trânsito marítimo.
+
+A nossa estimativa de chegada (ETA){local_destino} permanece para o dia {eta_input}{modalidade_door}.{texto_transbordo}
+
+Pode continuar a acompanhar o status através do link de rastreamento do armador:
+{link_direto}
+
+Qualquer necessidade, não hesite em nos contactar.
+
+Atenciosamente,
+Equipe DC Logistics Brasil"""
+
+                elif status_input == "Em desova no porto de transbordo":
+                    corpo_email = f"""Prezado cliente,
+
+Entramos em contacto para informar que o contêiner {container_input.upper()} (Processo: {processo_input}) chegou ao porto de transbordo e encontra-se em etapa de desova/movimentação.
+
+A previsão de chegada no destino final{local_destino} após esta etapa é {eta_input}{modalidade_door}.
+
+Acompanhe os próximos passos da carga pelo rastreio abaixo:
+{link_direto}
+
+Seguimos à disposição para qualquer esclarecimento.
+
+Atenciosamente,
+Equipe DC Logistics Brasil"""
+
+                elif status_input == "Liberado na Alfândega":
+                    corpo_email = f"""Prezado cliente,
+
+Temos boas notícias! Informamos que a carga referente ao processo {processo_input} (Contêiner: {container_input.upper()}) foi parametrizada e encontra-se devidamente liberada na alfândega.
+
+A carga segue agora o trâmite normal para a próxima etapa logística{modalidade_door}.
+
+Caso queira consultar o histórico no armador, segue o link:
+{link_direto}
+
+Nossa equipa continua acompanhando de perto. Qualquer dúvida, estamos à disposição.
+
+Atenciosamente,
+Equipe DC Logistics Brasil"""
+
+                elif status_input == "Disponível para Retirada":
+                    corpo_email = f"""Prezado cliente,
+
+Gostaríamos de informar que o contêiner {container_input.upper()} (Processo: {processo_input}) concluiu todas as etapas e já se encontra DISPONÍVEL PARA RETIRADA{local_destino}.
+
+Por favor, procedam com as programações de transporte necessárias de acordo com a modalidade contratada{modalidade_door}.
+
+Rastreio para consulta final:
+{link_direto}
+
+Agradecemos a confiança em nossos serviços e seguimos à disposição!
+
+Atenciosamente,
+Equipe DC Logistics Brasil"""
+                # ----------------------------------------------
 
                 nova_linha = {
                     "Processo": processo_input,
@@ -162,9 +223,8 @@ Equipe DC Logistics Brasil"""
                 st.success(f"Armador identificado com sucesso: **{armador_encontrado}**")
                 st.markdown(f"### 🔗 [Clique aqui para abrir o rastreio direto no site da {armador_encontrado}]({link_direto})")
                 
-                # Só mostra a caixa do e-mail se o botão clicado foi o "Gerar E-mail"
                 if btn_email:
-                    st.text_area("Modelo de E-mail Pronto para Copiar:", value=corpo_email, height=300)
+                    st.text_area("Modelo de E-mail Pronto para Copiar:", value=corpo_email, height=350)
                 
                 st.markdown("---")
                 st.subheader("🕒 Histórico de Atualizações desta Carga")
@@ -192,7 +252,7 @@ with aba2:
 
 with aba3:
     st.subheader("✏️ Editar Informações Salvas")
-    st.markdown("Dê um duplo clique em qualquer campo da tabela abaixo para editar (Status, Destino, ETA, etc). Quando terminar, clique no botão azul para salvar.")
+    st.markdown("Dê um duplo clique em qualquer campo da tabela abaixo para editar. Quando terminar, clique no botão azul para salvar.")
     
     if df_tracking.empty:
         st.info("Ainda não há dados para editar.")
