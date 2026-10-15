@@ -104,4 +104,89 @@ with aba1:
                 "Embarcado",
                 "Em desova no porto de transbordo"
             ])
-            destino_final
+            destino_final_input = st.text_input("Destino Final")
+            eta_input = st.text_input("Previsão de Chegada (ETA) no Destino Final", value="DD/MM/AAAA")
+            
+        btn_analisar = st.form_submit_button("Identificar Armador e Gerar Link")
+        
+        if btn_analisar:
+            if container_input:
+                armador_encontrado, link_direto = identificar_armador(container_input)
+                
+                st.success(f"Armador identificado com sucesso: **{armador_encontrado}**")
+                st.markdown(f"### 🔗 [Clique aqui para abrir o rastreio direto no site da {armador_encontrado}]({link_direto})")
+                
+                corpo_email = f"""Prezado(a) Cliente,
+
+Gostaríamos de atualizar o status do processo {processo_input}:
+
+• Contêiner: {container_input.upper()}
+• Porto de Transbordo: {porto_transbordo_input}
+• Chegada no Transbordo: {data_transbordo_input}
+• Destino Final: {destino_final_input}
+• Previsão de Chegada no Destino: {eta_input}
+• Status Atual: {status_input}
+
+Você pode acompanhar o rastreio oficial clicando no link abaixo:
+{link_direto}
+
+Qualquer dúvida, estamos à disposição.
+Atenciosamente,
+Sua Equipe de Logística"""
+
+                st.text_area("Modelo de E-mail Pronto para Copiar:", value=corpo_email, height=270)
+                
+                # Salvar a nova atualização com todos os dados
+                nova_linha = {
+                    "Processo": processo_input,
+                    "Container": container_input.upper(),
+                    "Armador Detectado": armador_encontrado,
+                    "Link de Rastreio": link_direto,
+                    "Status": status_input,
+                    "Porto de Transbordo": porto_transbordo_input,
+                    "Data Transbordo": data_transbordo_input,
+                    "Destino Final": destino_final_input,
+                    "ETA Destino": eta_input,
+                    "E-mail Pronto": "Gerado"
+                }
+                df_tracking = pd.concat([df_tracking, pd.DataFrame([nova_linha])], ignore_index=True)
+                salvar_dados(df_tracking)
+                
+                st.markdown("---")
+                st.subheader("🕒 Histórico de Atualizações desta Carga")
+                
+                if processo_input:
+                    historico_ref = df_tracking[(df_tracking['Container'] == container_input.upper()) | (df_tracking['Processo'] == processo_input)]
+                else:
+                    historico_ref = df_tracking[df_tracking['Container'] == container_input.upper()]
+                
+                st.dataframe(historico_ref, use_container_width=True)
+                
+            else:
+                st.error("Por favor, informe o número do contêiner.")
+
+with aba2:
+    st.subheader("Histórico de Contêineres Consultados (Geral)")
+    if df_tracking.empty:
+        st.info("Nenhum contêiner consultado ainda.")
+    else:
+        st.dataframe(df_tracking, use_container_width=True)
+        if st.button("🗑️ Limpar Todo o Histórico"):
+            if os.path.exists(ARQUIVO_DADOS):
+                os.remove(ARQUIVO_DADOS)
+            st.rerun()
+
+with aba3:
+    st.subheader("✏️ Editar Informações Salvas")
+    st.markdown("Dê um duplo clique em qualquer campo da tabela abaixo para editar (Status, Destino, ETA, etc). Quando terminar, clique no botão azul para salvar.")
+    
+    if df_tracking.empty:
+        st.info("Ainda não há dados para editar.")
+    else:
+        # Tabela editável
+        df_editado = st.data_editor(df_tracking, use_container_width=True, num_rows="dynamic")
+        
+        if st.button("💾 Salvar Alterações na Base de Dados", type="primary"):
+            salvar_dados(df_editado)
+            st.success("Dados atualizados com sucesso!")
+            st.rerun()
