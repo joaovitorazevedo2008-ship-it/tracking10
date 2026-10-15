@@ -2,6 +2,7 @@ import streamlit as st
 import pandas as pd
 import os
 from datetime import datetime, date
+import re
 
 # Tenta importar a biblioteca de leitura de PDF
 try:
@@ -175,8 +176,8 @@ if not st.session_state["autenticado"]:
 # --- BARRA LATERAL ---
 with st.sidebar:
     st.markdown("### 📖 Guia do Sistema")
-    st.markdown("**1️⃣ Pesquisa/Upload:** Procure por referência ou faça upload do PDF de Booking para consultar as informações na íntegra.")
-    st.markdown("**2️⃣ Atualização:** Insira o contêiner, status e prazos.")
+    st.markdown("**1️⃣ Upload de Booking:** Faça upload do PDF para preencher automaticamente destino, ETA e portos.")
+    st.markdown("**2️⃣ Atualização:** Insira a referência, o contêiner e o status.")
     st.markdown("**3️⃣ Comunicação:** Salve e gere e-mails padronizados instantaneamente.")
     st.markdown("---")
     if st.button("🚪 Encerrar Sessão"):
@@ -271,181 +272,148 @@ if not df_tracking.empty:
             
     st.markdown("<br>", unsafe_allow_html=True)
 
-aba1, aba2, aba3 = st.tabs(["🚀 1. Consulta, Upload e Atualização", "📋 2. Histórico Consolidado e Filtros", "✏️ 3. Edição Rápida"])
+aba1, aba2, aba3 = st.tabs(["🚀 1. Automação por Booking e Atualização", "📋 2. Histórico Consolidado e Filtros", "✏️ 3. Edição Rápida"])
 
 with aba1:
-    st.markdown("### 🔍 Pesquisa de Referência ou Consulta de Booking (PDF)")
+    st.markdown("### 📄 Automação Inteligente por Booking (PDF)")
     
-    if "ref_pesquisada" not in st.session_state:
-        st.session_state["ref_pesquisada"] = ""
-    if "liberar_formulario" not in st.session_state:
-        st.session_state["liberar_formulario"] = False
-    if "pdf_texto_lido" not in st.session_state:
-        st.session_state["pdf_texto_lido"] = ""
+    # Inicializa variáveis de estado para o auto-preenchimento
+    if "auto_processo" not in st.session_state: st.session_state["auto_processo"] = ""
+    if "auto_destino" not in st.session_state: st.session_state["auto_destino"] = ""
+    if "auto_eta" not in st.session_state: st.session_state["auto_eta"] = ""
+    if "auto_modalidade" not in st.session_state: st.session_state["auto_modalidade"] = ""
+    if "auto_origem" not in st.session_state: st.session_state["auto_origem"] = ""
 
-    # UPLOAD DE BOOKING COM EXIBIÇÃO DO TEXTO PARA CONSULTA RÁPIDA
     if has_pypdf:
-        st.markdown("#### 📄 Leitor de Booking em PDF")
-        arquivo_pdf = st.file_uploader("Faça o upload do Booking para visualizar as informações extraídas", type=["pdf"])
+        arquivo_pdf = st.file_uploader("Faça o upload do Booking em PDF para preenchimento automático", type=["pdf"])
         if arquivo_pdf is not None:
             try:
                 leitor = PdfReader(arquivo_pdf)
-                texto_extraido = ""
+                texto_pdf = ""
                 for pagina in leitor.pages:
-                    texto_extraido += pagina.extract_text() or ""
+                    texto_pdf += pagina.extract_text() or ""
                 
-                st.session_state["pdf_texto_lido"] = texto_extraido
-                st.success("✨ PDF lido com sucesso! Consulte o texto extraído abaixo para preencher os campos com precisão.")
+                # Extrai Booking / Processo (Ex: SSZ/CHI/1295477)
+                match_proc = re.search(r'Booking\s*\|\s*([A-Z0-9/]+)', texto_pdf)
+                if match_proc:
+                    st.session_state["auto_processo"] = match_proc.group(1).strip()
+                
+                # Extrai Destino Final (Ex: INDIANAPOLIS)
+                match_dest = re.search(r'Destino Final\s*\|\s*([A-Z\s,]+)', texto_pdf)
+                if match_dest:
+                    st.session_state["auto_destino"] = match_dest.group(1).strip().split('\n')[0]
+                
+                # Extrai ETA (Procura por datas no formato DD/MM/AAAA)
+                match_etas = re.findall(r'\d{2}/\d{2}/\d{4}', texto_pdf)
+                if match_etas:
+                    # Pega a última data válida encontrada no booking como ETA final
+                    st.session_state["auto_eta"] = match_etas[-1]
+
+                # Extrai Modalidade (Ex: Ramp)
+                if "Ramp" in texto_pdf:
+                    st.session_state["auto_modalidade"] = "Ramp"
+                elif "Door" in texto_pdf:
+                    st.session_state["auto_modalidade"] = "Door"
+
+                st.success("✨ Dados extraídos com sucesso do PDF e aplicados abaixo automaticamente!")
             except Exception as e:
-                st.error(f"Erro ao ler o ficheiro PDF: {e}")
-        
-        # Se houver texto lido, mostra numa caixa de texto limpa para consulta
-        if st.session_state["pdf_texto_lido"]:
-            with st.expander("📖 Ver Texto Extraído do PDF do Booking"):
-                st.text_area("Conteúdo do Booking:", value=st.session_state["pdf_texto_lido"], height=200)
-        
+                st.error(f"Erro ao processar o PDF: {e}")
         st.markdown("---")
 
-    with st.form("form_busca_ref"):
-        input_pesquisa = st.text_input("Nº do Processo / Referência", value=st.session_state["ref_pesquisada"])
-        btn_pesquisar = st.form_submit_button("Pesquisar Referência")
+    with st.form("form_dados_carga"):
+        st.markdown("### 📝 Dados da Carga (Preenchidos pelo Booking ou Manuais)")
         
-        if btn_pesquisar:
-            if input_pesquisa:
-                st.session_state["ref_pesquisada"] = input_pesquisa.strip().upper()
-                st.session_state["liberar_formulario"] = True
-                st.rerun()
-            else:
-                st.warning("⚠️ Insira uma referência válida para realizar a busca.")
+        col1, col2 = st.columns(2)
+        with col1:
+            processo_input = st.text_input("Nº do Processo / Referência", value=st.session_state["auto_processo"])
+            container_input = st.text_input("Nº do Contêiner", value="", help="Formato ex.: HAMU181362 ou MSCU1234567")
+            porto_transbordo_input = st.text_input("Porto de Transbordo / Origem", value=st.session_state["auto_origem"])
+            data_transbordo_input = st.text_input("Data no Transbordo", value="")
+            
+        with col2:
+            status_opcoes = [
+                "Embarcado",
+                "Em trânsito", 
+                "Em desova no porto de transbordo",
+                "A caminho do destino final",
+                "Chegada confirmada",
+                "Liberado na Alfândega", 
+                "Em inspeção alfandegária",
+                "Disponível para Retirada"
+            ]
+            status_input = st.selectbox("Status Atual da Carga", status_opcoes, index=0)
+            destino_final_input = st.text_input("Destino Final", value=st.session_state["auto_destino"])
+            eta_input = st.text_input("Previsão de Chegada (ETA)", value=st.session_state["auto_eta"] if st.session_state["auto_eta"] else "DD/MM/AAAA")
+            door_ramp_input = st.text_input("Modalidade (DOOR/RAMP)", value=st.session_state["auto_modalidade"])
+            
+        st.markdown("<br>", unsafe_allow_html=True)
+        col_btn1, col_btn2 = st.columns(2)
+        with col_btn1:
+            btn_analisar = st.form_submit_button("Salvar Registo")
+        with col_btn2:
+            btn_email = st.form_submit_button("Salvar e Gerar E-mail p/ Cliente")
+    
+    if btn_analisar or btn_email:
+        if processo_input and container_input:
+            armador_encontrado, link_direto = identificar_armador(container_input)
+            alerta_status_eta = calcular_alerta_eta(eta_input)
+            
+            local_destino = f" ({destino_final_input})" if destino_final_input else ""
+            modalidade = f" na modalidade {door_ramp_input}" if door_ramp_input else ""
+            
+            eta_txt = eta_input if eta_input and eta_input != "DD/MM/AAAA" else "a confirmar"
+            frase_eta = f"A previsão de chegada ao destino final{local_destino} é {eta_txt}{modalidade}."
+            
+            frase_transbordo = ""
+            if porto_transbordo_input:
+                data_t = f" para o dia {data_transbordo_input}" if data_transbordo_input else ""
+                frase_transbordo = f" Lembramos que a carga possui transbordo previsto no porto de {porto_transbordo_input}{data_t}."
 
-    if st.session_state["liberar_formulario"]:
-        ref_atual = st.session_state["ref_pesquisada"]
-        filtro_proc = df_tracking[df_tracking['Processo'].astype(str).str.upper() == ref_atual]
-        
-        def_container = ""
-        def_porto = ""
-        def_data_t = ""
-        def_dest = ""
-        def_eta = "DD/MM/AAAA"
-        def_door = ""
-        def_status = "Embarcado"
-        
-        status_opcoes = [
-            "Embarcado",
-            "Em trânsito", 
-            "Em desova no porto de transbordo",
-            "A caminho do destino final",
-            "Chegada confirmada",
-            "Liberado na Alfândega", 
-            "Em inspeção alfandegária",
-            "Disponível para Retirada"
-        ]
+            if status_input == "Embarcado":
+                corpo_email = f"Prezado cliente,\n\nInformamos que a carga referente ao processo {processo_input} (Contêiner: {container_input.upper()}) foi embarcada no porto de Santos.\n{frase_eta}{frase_transbordo}"
+            elif status_input == "Em trânsito":
+                corpo_email = f"Prezado cliente,\n\nInformamos que a carga referente ao processo {processo_input} (Contêiner: {container_input.upper()}), embarcada no porto de Santos, encontra-se em trânsito marítimo.\n{frase_eta}{frase_transbordo}"
+            elif status_input == "Em desova no porto de transbordo":
+                corpo_email = f"Prezado cliente,\n\nInformamos que a carga referente ao processo {processo_input} (Contêiner: {container_input.upper()}) chegou ao porto de transbordo e encontra-se em etapa de desova/movimentação.\n{frase_eta}"
+            elif status_input == "A caminho do destino final":
+                corpo_email = f"Prezado cliente,\n\nInformamos que a carga referente ao processo {processo_input} (Contêiner: {container_input.upper()}) encontra-se a caminho do destino final{local_destino}.\n{frase_eta}"
+            elif status_input == "Chegada confirmada":
+                corpo_email = f"Prezado cliente,\n\nInformamos que a chegada da carga referente ao processo {processo_input} (Contêiner: {container_input.upper()}) foi confirmada no destino final{local_destino}{modalidade}."
+            elif status_input == "Liberado na Alfândega":
+                corpo_email = f"Prezado cliente,\n\nInformamos que a carga referente ao processo {processo_input} (Contêiner: {container_input.upper()}) encontra-se liberada na alfândega.\nA carga segue para a próxima etapa logística{modalidade}."
+            elif status_input == "Em inspeção alfandegária":
+                corpo_email = f"Prezado cliente,\n\nInformamos que a carga referente ao processo {processo_input} (Contêiner: {container_input.upper()}) encontra-se atualmente em inspeção alfandegária.\nSeguimos a monitorizar o processo de perto."
+            elif status_input == "Disponível para Retirada":
+                corpo_email = f"Prezado cliente,\n\nInformamos que a carga referente ao processo {processo_input} (Contêiner: {container_input.upper()}) encontra-se disponível para retirada{local_destino}{modalidade}."
 
-        if not filtro_proc.empty:
-            ultimo_reg = filtro_proc.iloc[-1]
-            def_container = str(ultimo_reg.get("Container", ""))
-            def_porto = str(ultimo_reg.get("Porto de Transbordo", ""))
-            def_data_t = str(ultimo_reg.get("Data Transbordo", ""))
-            def_dest = str(ultimo_reg.get("Destino Final", ""))
+            nova_linha = {
+                "Processo": processo_input.upper(),
+                "Container": container_input.upper(),
+                "Armador Detectado": armador_encontrado,
+                "Status": status_input,
+                "Porto de Transbordo": porto_transbordo_input.upper(),
+                "Data Transbordo": data_transbordo_input,
+                "Destino Final": destino_final_input.upper(),
+                "ETA Destino": eta_input,
+                "DOOR/RAMP": door_ramp_input.upper(),
+                "E-mail Pronto": "Gerado",
+                "Alerta ETA": alerta_status_eta
+            }
+            df_tracking = pd.concat([df_tracking, pd.DataFrame([nova_linha])], ignore_index=True)
+            salvar_dados(df_tracking)
             
-            eta_salvo = str(ultimo_reg.get("ETA Destino", ""))
-            if eta_salvo: def_eta = eta_salvo
-                
-            door_salvo = str(ultimo_reg.get("DOOR/RAMP", ""))
-            if door_salvo: def_door = door_salvo
+            st.info(f"⛴️ **Armador Identificado:** {armador_encontrado} | [Aceder ao rastreamento oficial]({link_direto})")
             
-            status_salvo = str(ultimo_reg.get("Status", ""))
-            if status_salvo in status_opcoes: def_status = status_salvo
+            if btn_email:
+                st.text_area("📋 Modelo de E-mail Pronto para Copiar:", value=corpo_email, height=150)
             
-            st.success(f"✨ Referência **{ref_atual}** localizada. Dados carregados.")
+            st.markdown("---")
+            st.subheader("🕒 Histórico Recente do Processo")
+            historico_ref = df_tracking[(df_tracking['Container'] == container_input.upper()) | (df_tracking['Processo'].astype(str).str.upper() == processo_input.upper())]
+            st.dataframe(historico_ref, use_container_width=True)
+            
         else:
-            st.info(f"ℹ️ Nova referência **{ref_atual}**. Preencha os campos abaixo para registar a carga.")
-
-        idx_status = status_opcoes.index(def_status)
-
-        with st.form("form_dados_carga"):
-            st.markdown(f"### 📋 Detalhes da Operação - Processo: **{ref_atual}**")
-            
-            col1, col2 = st.columns(2)
-            with col1:
-                container_input = st.text_input("Nº do Contêiner", value=def_container, help="Formato ex.: MSCU1234567")
-                porto_transbordo_input = st.text_input("Porto de Transbordo", value=def_porto)
-                data_transbordo_input = st.text_input("Data no Transbordo", value=def_data_t)
-                
-            with col2:
-                status_input = st.selectbox("Status Atual da Carga", status_opcoes, index=idx_status)
-                destino_final_input = st.text_input("Destino Final", value=def_dest)
-                eta_input = st.text_input("Previsão de Chegada (ETA)", value=def_eta)
-                door_ramp_input = st.text_input("Modalidade (DOOR/RAMP)", value=def_door)
-                
-            st.markdown("<br>", unsafe_allow_html=True)
-            col_btn1, col_btn2 = st.columns(2)
-            with col_btn1:
-                btn_analisar = st.form_submit_button("Salvar Registo")
-            with col_btn2:
-                btn_email = st.form_submit_button("Salvar e Gerar E-mail p/ Cliente")
-        
-        if btn_analisar or btn_email:
-            if ref_atual and container_input:
-                armador_encontrado, link_direto = identificar_armador(container_input)
-                alerta_status_eta = calcular_alerta_eta(eta_input)
-                
-                local_destino = f" ({destino_final_input})" if destino_final_input else ""
-                modalidade = f" na modalidade {door_ramp_input}" if door_ramp_input else ""
-                
-                eta_txt = eta_input if eta_input and eta_input != "DD/MM/AAAA" else "a confirmar"
-                frase_eta = f"A previsão de chegada ao destino final{local_destino} é {eta_txt}{modalidade}."
-                
-                frase_transbordo = ""
-                if porto_transbordo_input:
-                    data_t = f" para o dia {data_transbordo_input}" if data_transbordo_input else ""
-                    frase_transbordo = f" Lembramos que a carga possui transbordo previsto no porto de {porto_transbordo_input}{data_t}."
-
-                if status_input == "Embarcado":
-                    corpo_email = f"Prezado cliente,\n\nInformamos que a carga referente ao processo {ref_atual} (Contêiner: {container_input.upper()}) foi embarcada no porto de Santos.\n{frase_eta}{frase_transbordo}"
-                elif status_input == "Em trânsito":
-                    corpo_email = f"Prezado cliente,\n\nInformamos que a carga referente ao processo {ref_atual} (Contêiner: {container_input.upper()}), embarcada no porto de Santos, encontra-se em trânsito marítimo.\n{frase_eta}{frase_transbordo}"
-                elif status_input == "Em desova no porto de transbordo":
-                    corpo_email = f"Prezado cliente,\n\nInformamos que a carga referente ao processo {ref_atual} (Contêiner: {container_input.upper()}) chegou ao porto de transbordo e encontra-se em etapa de desova/movimentação.\n{frase_eta}"
-                elif status_input == "A caminho do destino final":
-                    corpo_email = f"Prezado cliente,\n\nInformamos que a carga referente ao processo {ref_atual} (Contêiner: {container_input.upper()}) encontra-se a caminho do destino final{local_destino}.\n{frase_eta}"
-                elif status_input == "Chegada confirmada":
-                    corpo_email = f"Prezado cliente,\n\nInformamos que a chegada da carga referente ao processo {ref_atual} (Contêiner: {container_input.upper()}) foi confirmada no destino final{local_destino}{modalidade}."
-                elif status_input == "Liberado na Alfândega":
-                    corpo_email = f"Prezado cliente,\n\nInformamos que a carga referente ao processo {ref_atual} (Contêiner: {container_input.upper()}) encontra-se liberada na alfândega.\nA carga segue para a próxima etapa logística{modalidade}."
-                elif status_input == "Em inspeção alfandegária":
-                    corpo_email = f"Prezado cliente,\n\nInformamos que a carga referente ao processo {ref_atual} (Contêiner: {container_input.upper()}) encontra-se atualmente em inspeção alfandegária.\nSeguimos a monitorizar o processo de perto."
-                elif status_input == "Disponível para Retirada":
-                    corpo_email = f"Prezado cliente,\n\nInformamos que a carga referente ao processo {ref_atual} (Contêiner: {container_input.upper()}) encontra-se disponível para retirada{local_destino}{modalidade}."
-
-                nova_linha = {
-                    "Processo": ref_atual,
-                    "Container": container_input.upper(),
-                    "Armador Detectado": armador_encontrado,
-                    "Status": status_input,
-                    "Porto de Transbordo": porto_transbordo_input,
-                    "Data Transbordo": data_transbordo_input,
-                    "Destino Final": destino_final_input,
-                    "ETA Destino": eta_input,
-                    "DOOR/RAMP": door_ramp_input,
-                    "E-mail Pronto": "Gerado",
-                    "Alerta ETA": alerta_status_eta
-                }
-                df_tracking = pd.concat([df_tracking, pd.DataFrame([nova_linha])], ignore_index=True)
-                salvar_dados(df_tracking)
-                
-                st.info(f"⛴️ **Armador Identificado:** {armador_encontrado} | [Aceder ao rastreamento oficial]({link_direto})")
-                
-                if btn_email:
-                    st.text_area("📋 Modelo de E-mail Pronto para Copiar:", value=corpo_email, height=150)
-                
-                st.markdown("---")
-                st.subheader("🕒 Histórico Recente do Processo")
-                historico_ref = df_tracking[(df_tracking['Container'] == container_input.upper()) | (df_tracking['Processo'].astype(str).str.upper() == ref_atual)]
-                st.dataframe(historico_ref, use_container_width=True)
-                
-            else:
-                st.error("⚠️ Por favor, informe o Nº do Contêiner.")
+            st.error("⚠️ Por favor, preencha o Nº do Processo e o Nº do Contêiner.")
 
 with aba2:
     st.subheader("Histórico Consolidado e Processos Filtrados")
