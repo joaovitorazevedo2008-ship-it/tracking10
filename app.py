@@ -5,7 +5,7 @@ import os
 # Configuração inicial da página
 st.set_page_config(page_title="Rastreamento de Contêineres", page_icon="⚓", layout="wide", initial_sidebar_state="expanded")
 
-# --- DESIGN CUSTOMIZADO (FUNDO AZUL, TEXTO AMARELO EM BOTÕES E CAMPOS VISÍVEIS) ---
+# --- DESIGN CUSTOMIZADO (FUNDO AZUL E ESCRITA AMARELO EM TODOS OS CAMPOS E MENUS) ---
 st.markdown("""
     <style>
     /* Fundo da aplicação Branco */
@@ -166,7 +166,7 @@ def identificar_armador(container):
         return "MSC", f"https://www.msc.com/en/track-a-shipment?trackingNumber={container.strip()}"
     elif prefixo in ["MAEU", "MSKU", "MRKU", "APMU", "PONU", "SEAU", "POCU", "OCLU", "NZSU"]:
         return "Maersk", f"https://www.maersk.com/tracking/{container.strip()}"
-    elif prefixo in ["HLCU", "HLXU", "HLBU", "AZLU", "CACU", "CASU", "CMUU", "CPSU", "CSQU", "DALU"]:
+    elif prefixo in ["HLCU", "HLXU", "HLBU", "AZLU", "CACU", "CASU", "CMUU", "CPSU", "CSQU", "DALU", "HAMU"]:
         return "Hapag-Lloyd", f"https://www.hapag-lloyd.com/en/online-business/track/track-by-container.html?container={container.strip()}"
     elif prefixo in ["CMAU", "CGMU", "CGHU", "CMNU", "ECMU", "AMCU", "TGHU"]:
         return "CMA CGM", f"https://www.cma-cgm.com/ebusiness/tracking/search?SearchBy=Container&SearchValue={container.strip()}"
@@ -208,7 +208,6 @@ aba1, aba2, aba3 = st.tabs(["🚀 1. Buscar e Atualizar Carga", "📋 2. Histór
 with aba1:
     st.markdown("### 🔍 Passo 1: Buscar por Referência / Processo")
     
-    # Inicializa variáveis na sessão se não existirem
     if "ref_pesquisada" not in st.session_state:
         st.session_state["ref_pesquisada"] = ""
     if "liberar_formulario" not in st.session_state:
@@ -226,7 +225,6 @@ with aba1:
             else:
                 st.warning("⚠️ Digite uma referência válida para pesquisar.")
 
-    # SÓ MOSTRA O RESTO DO FORMULÁRIO SE A REFERÊNCIA JÁ TIVER SIDO PESQUISADA
     if st.session_state["liberar_formulario"]:
         ref_atual = st.session_state["ref_pesquisada"]
         
@@ -278,7 +276,6 @@ with aba1:
             
             col1, col2 = st.columns(2)
             with col1:
-                # CAMPO DE BUSCA DO CONTÊINER
                 container_input = st.text_input("Nº do Contêiner (Ex: MSCU1234567)", value=def_container, help="Informe o contêiner para identificar o armador automaticamente.")
                 porto_transbordo_input = st.text_input("Porto de Transbordo", value=def_porto, help="Opcional. Preencha apenas se houver transbordo.")
                 data_transbordo_input = st.text_input("Data no Transbordo", value=def_data_t, help="Data de chegada no porto de transbordo.")
