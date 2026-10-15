@@ -175,8 +175,8 @@ if not st.session_state["autenticado"]:
 # --- BARRA LATERAL ---
 with st.sidebar:
     st.markdown("### 📖 Guia do Sistema")
-    st.markdown("**1️⃣ Pesquisa/Upload:** Procure por referência ou faça upload do PDF de Booking para preencher os dados de destino, datas e portos automaticamente.")
-    st.markdown("**2️⃣ Atualização:** Insira o contêiner manualmente, status e prazos.")
+    st.markdown("**1️⃣ Pesquisa/Upload:** Procure por referência ou faça upload do PDF de Booking para consultar as informações na íntegra.")
+    st.markdown("**2️⃣ Atualização:** Insira o contêiner, status e prazos.")
     st.markdown("**3️⃣ Comunicação:** Salve e gere e-mails padronizados instantaneamente.")
     st.markdown("---")
     if st.button("🚪 Encerrar Sessão"):
@@ -274,32 +274,36 @@ if not df_tracking.empty:
 aba1, aba2, aba3 = st.tabs(["🚀 1. Consulta, Upload e Atualização", "📋 2. Histórico Consolidado e Filtros", "✏️ 3. Edição Rápida"])
 
 with aba1:
-    st.markdown("### 🔍 Pesquisa de Referência ou Upload de Booking")
+    st.markdown("### 🔍 Pesquisa de Referência ou Consulta de Booking (PDF)")
     
     if "ref_pesquisada" not in st.session_state:
         st.session_state["ref_pesquisada"] = ""
     if "liberar_formulario" not in st.session_state:
         st.session_state["liberar_formulario"] = False
-    
-    # Variáveis para armazenar dados extraídos do PDF (destino, datas, etc.)
-    if "pdf_texto_extraido" not in st.session_state:
-        st.session_state["pdf_texto_extraido"] = ""
+    if "pdf_texto_lido" not in st.session_state:
+        st.session_state["pdf_texto_lido"] = ""
 
-    # Opção de UPLOAD DE BOOKING (PDF) para preencher datas e destinos
+    # UPLOAD DE BOOKING COM EXIBIÇÃO DO TEXTO PARA CONSULTA RÁPIDA
     if has_pypdf:
-        st.markdown("#### 📄 Automação por PDF (Booking Confirmation)")
-        arquivo_pdf = st.file_uploader("Faça o upload do Booking em PDF para preencher dados de destino, datas e portos", type=["pdf"])
+        st.markdown("#### 📄 Leitor de Booking em PDF")
+        arquivo_pdf = st.file_uploader("Faça o upload do Booking para visualizar as informações extraídas", type=["pdf"])
         if arquivo_pdf is not None:
             try:
                 leitor = PdfReader(arquivo_pdf)
-                texto_pdf = ""
+                texto_extraido = ""
                 for pagina in leitor.pages:
-                    texto_pdf += pagina.extract_text() or ""
+                    texto_extraido += pagina.extract_text() or ""
                 
-                st.session_state["pdf_texto_extraido"] = texto_pdf
-                st.success("✨ PDF carregado com sucesso! Preencha a referência abaixo para aplicar os dados.")
+                st.session_state["pdf_texto_lido"] = texto_extraido
+                st.success("✨ PDF lido com sucesso! Consulte o texto extraído abaixo para preencher os campos com precisão.")
             except Exception as e:
                 st.error(f"Erro ao ler o ficheiro PDF: {e}")
+        
+        # Se houver texto lido, mostra numa caixa de texto limpa para consulta
+        if st.session_state["pdf_texto_lido"]:
+            with st.expander("📖 Ver Texto Extraído do PDF do Booking"):
+                st.text_area("Conteúdo do Booking:", value=st.session_state["pdf_texto_lido"], height=200)
+        
         st.markdown("---")
 
     with st.form("form_busca_ref"):
@@ -364,7 +368,7 @@ with aba1:
             
             col1, col2 = st.columns(2)
             with col1:
-                container_input = st.text_input("Nº do Contêiner (Digite manualmente)", value=def_container, help="Formato ex.: MSCU1234567")
+                container_input = st.text_input("Nº do Contêiner", value=def_container, help="Formato ex.: MSCU1234567")
                 porto_transbordo_input = st.text_input("Porto de Transbordo", value=def_porto)
                 data_transbordo_input = st.text_input("Data no Transbordo", value=def_data_t)
                 
