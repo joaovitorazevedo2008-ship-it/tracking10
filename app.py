@@ -127,65 +127,35 @@ with aba1:
                 local_destino = f" em {destino_final_input}" if destino_final_input else ""
                 modalidade_door = f" (Modalidade: {door_ramp_input})" if door_ramp_input else ""
 
-                # --- MODELOS DE E-MAIL LIMPOS E DIRETOS ---
+                # --- MODELOS DE E-MAIL (Sem link e sem assinatura) ---
                 if status_input == "Embarcado":
                     corpo_email = f"""Prezado cliente,
 
 Informamos que a carga referente ao processo {processo_input} (Contêiner: {container_input.upper()}) foi embarcada no porto de Santos. 
-A previsão de chegada no destino final{local_destino} é {eta_input}{modalidade_door}{texto_transbordo}.
-
-Rastreio do armador:
-{link_direto}
-
-Atenciosamente,
-Equipe DC Logistics Brasil"""
+A previsão de chegada no destino final{local_destino} é {eta_input}{modalidade_door}{texto_transbordo}."""
 
                 elif status_input == "Em trânsito":
                     corpo_email = f"""Prezado cliente,
 
 Informamos que a carga referente ao processo {processo_input} (Contêiner: {container_input.upper()}), embarcada no porto de Santos, encontra-se em trânsito marítimo.
-A previsão de chegada no destino final{local_destino} é {eta_input}{modalidade_door}{texto_transbordo}.
-
-Rastreio do armador:
-{link_direto}
-
-Atenciosamente,
-Equipe DC Logistics Brasil"""
+A previsão de chegada no destino final{local_destino} é {eta_input}{modalidade_door}{texto_transbordo}."""
 
                 elif status_input == "Em desova no porto de transbordo":
                     corpo_email = f"""Prezado cliente,
 
 Informamos que a carga referente ao processo {processo_input} (Contêiner: {container_input.upper()}) chegou ao porto de transbordo e encontra-se em etapa de desova/movimentação.
-A previsão de chegada no destino final{local_destino} é {eta_input}{modalidade_door}.
-
-Rastreio do armador:
-{link_direto}
-
-Atenciosamente,
-Equipe DC Logistics Brasil"""
+A previsão de chegada no destino final{local_destino} é {eta_input}{modalidade_door}."""
 
                 elif status_input == "Liberado na Alfândega":
                     corpo_email = f"""Prezado cliente,
 
 Informamos que a carga referente ao processo {processo_input} (Contêiner: {container_input.upper()}) encontra-se liberada na alfândega.
-A carga segue para a próxima etapa logística{modalidade_door}.
-
-Rastreio do armador:
-{link_direto}
-
-Atenciosamente,
-Equipe DC Logistics Brasil"""
+A carga segue para a próxima etapa logística{modalidade_door}."""
 
                 elif status_input == "Disponível para Retirada":
                     corpo_email = f"""Prezado cliente,
 
-Informamos que a carga referente ao processo {processo_input} (Contêiner: {container_input.upper()}) encontra-se disponível para retirada{local_destino}{modalidade_door}.
-
-Rastreio do armador:
-{link_direto}
-
-Atenciosamente,
-Equipe DC Logistics Brasil"""
+Informamos que a carga referente ao processo {processo_input} (Contêiner: {container_input.upper()}) encontra-se disponível para retirada{local_destino}{modalidade_door}."""
                 # ----------------------------------------------
 
                 nova_linha = {
@@ -207,7 +177,8 @@ Equipe DC Logistics Brasil"""
                 st.markdown(f"### 🔗 [Clique aqui para abrir o rastreio direto no site da {armador_encontrado}]({link_direto})")
                 
                 if btn_email:
-                    st.text_area("Modelo de E-mail Pronto para Copiar:", value=corpo_email, height=250)
+                    # Altura reduzida já que o texto é menor
+                    st.text_area("Modelo de E-mail Pronto para Copiar:", value=corpo_email, height=150)
                 
                 st.markdown("---")
                 st.subheader("🕒 Histórico de Atualizações desta Carga")
