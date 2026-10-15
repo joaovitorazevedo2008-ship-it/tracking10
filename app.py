@@ -176,9 +176,9 @@ if not st.session_state["autenticado"]:
 # --- BARRA LATERAL ---
 with st.sidebar:
     st.markdown("### 📖 Guia do Sistema")
-    st.markdown("**1️⃣ Upload do Booking:** Anexe o PDF do Booking para preencher automaticamente processo, transbordo, destino e ETA.")
-    st.markdown("**2️⃣ Atualização:** Insira o contêiner e o status.")
-    st.markdown("**3️⃣ Comunicação:** Salve e gere e-mails padronizados instantaneamente.")
+    st.markdown("**1️⃣ Upload Automático:** Carregue o PDF do Booking para preencher o formulário instantaneamente.")
+    st.markdown("**2️⃣ Atualização:** Insira o contêiner e confirme o status.")
+    st.markdown("**3️⃣ Comunicação:** Salve e gere e-mails profissionais para o cliente.")
     st.markdown("---")
     if st.button("🚪 Encerrar Sessão"):
         st.session_state["autenticado"] = False
@@ -275,14 +275,15 @@ if not df_tracking.empty:
 aba1, aba2, aba3 = st.tabs(["🚀 1. Automação por Booking e Registo", "📋 2. Histórico Consolidado e Filtros", "✏️ 3. Edição Rápida"])
 
 with aba1:
-    st.markdown("### 📄 Leitura Automática de Booking (PDF)")
+    st.markdown("### 📄 Leitura e Preenchimento Automático por Booking (PDF)")
     
+    # Inicializa variáveis de estado para automação
     if "auto_processo" not in st.session_state: st.session_state["auto_processo"] = ""
+    if "auto_origem" not in st.session_state: st.session_state["auto_origem"] = ""
+    if "auto_data_origem" not in st.session_state: st.session_state["auto_data_origem"] = ""
     if "auto_destino" not in st.session_state: st.session_state["auto_destino"] = ""
     if "auto_eta" not in st.session_state: st.session_state["auto_eta"] = ""
     if "auto_modalidade" not in st.session_state: st.session_state["auto_modalidade"] = ""
-    if "auto_origem" not in st.session_state: st.session_state["auto_origem"] = ""
-    if "auto_data_origem" not in st.session_state: st.session_state["auto_data_origem"] = ""
 
     if has_pypdf:
         arquivo_pdf = st.file_uploader("Faça o upload do Booking em PDF para preenchimento automático", type=["pdf"])
@@ -293,24 +294,29 @@ with aba1:
                 for pagina in leitor.pages:
                     texto_pdf += pagina.extract_text() or ""
                 
-                # 1. Extrai Referência do Booking (Ex: SSZ/CHI/1295477)
+                # 1. Extração do Nº do Processo / Booking (Ex: SSZ/CHI/1295477)
                 match_bkg = re.search(r'Booking\s*\|\s*([A-Z0-9/]+)', texto_pdf)
                 if match_bkg:
                     st.session_state["auto_processo"] = match_bkg.group(1).strip()
-                
-                # 2. Extrai Porto de Origem / Transbordo (Ex: SANTOS / EMBRAPORT)
+                else:
+                    # Alternativa para formato DC...
+                    match_dc = re.search(r'\b(DC\d+)\b', texto_pdf.upper())
+                    if match_dc:
+                        st.session_state["auto_processo"] = match_dc.group(1)
+
+                # 2. Extração do Porto de Origem / Transbordo (Ex: SANTOS)
                 match_loading = re.search(r'Porto de Loading\s*\|\s*([A-Z\s,/-]+)', texto_pdf)
                 if match_loading:
                     st.session_state["auto_origem"] = match_loading.group(1).strip().split('\n')[0]
                 elif "SANTOS" in texto_pdf.upper():
                     st.session_state["auto_origem"] = "SANTOS, SP"
 
-                # 3. Extrai Destino Final (Ex: INDIANAPOLIS)
+                # 3. Extração do Destino Final (Ex: INDIANAPOLIS)
                 match_dest = re.search(r'Destino Final\s*\|\s*([A-Z\s,]+)', texto_pdf)
                 if match_dest:
                     st.session_state["auto_destino"] = match_dest.group(1).strip().split('\n')[0]
 
-                # 4. Extrai Datas (ETD e ETA)
+                # 4. Extração de Datas (ETD e ETA)
                 match_datas = re.findall(r'\d{2}/\d{2}/\d{4}', texto_pdf)
                 if match_datas:
                     if len(match_datas) >= 2:
@@ -319,19 +325,19 @@ with aba1:
                     else:
                         st.session_state["auto_eta"] = match_datas[0]
 
-                # 5. Extrai Modalidade (Ramp / Door)
+                # 5. Extração de Modalidade (Ramp / Door)
                 if "Ramp" in texto_pdf:
                     st.session_state["auto_modalidade"] = "RAMP"
                 elif "Door" in texto_pdf:
                     st.session_state["auto_modalidade"] = "DOOR"
 
-                st.success("✨ Dados do Booking extraídos e preenchidos automaticamente com sucesso!")
+                st.success("✨ Sucesso! Todos os dados do Booking foram extraídos e preenchidos automaticamente abaixo.")
             except Exception as e:
                 st.error(f"Erro ao processar o PDF: {e}")
         st.markdown("---")
 
     with st.form("form_dados_carga"):
-        st.markdown("### 📝 Dados da Carga")
+        st.markdown("### 📝 Dados da Carga (Preenchidos Automaticamente)")
         
         col1, col2 = st.columns(2)
         with col1:
