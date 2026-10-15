@@ -119,27 +119,23 @@ with aba1:
             if container_input:
                 armador_encontrado, link_direto = identificar_armador(container_input)
                 
-                # Variáveis auxiliares para montar o texto de forma natural
                 texto_transbordo = ""
                 if porto_transbordo_input:
                     data_t = f" no dia {data_transbordo_input}" if data_transbordo_input else ""
-                    texto_transbordo = f" Lembramos que a carga tem passagem prevista pelo porto de transbordo ({porto_transbordo_input}){data_t}."
+                    texto_transbordo = f" com passagem prevista pelo porto de transbordo ({porto_transbordo_input}){data_t}"
 
                 local_destino = f" em {destino_final_input}" if destino_final_input else ""
                 modalidade_door = f" (Modalidade: {door_ramp_input})" if door_ramp_input else ""
 
-                # --- LÓGICA DE E-MAILS SEPARADOS POR STATUS ---
+                # --- MODELOS DE E-MAIL LIMPOS E DIRETOS ---
                 if status_input == "Embarcado":
                     corpo_email = f"""Prezado cliente,
 
-Informamos que a sua carga referente ao processo {processo_input} (Contêiner: {container_input.upper()}) foi embarcada com sucesso na origem. 
+Informamos que a carga referente ao processo {processo_input} (Contêiner: {container_input.upper()}) foi embarcada no porto de Santos. 
+A previsão de chegada no destino final{local_destino} é {eta_input}{modalidade_door}{texto_transbordo}.
 
-A previsão atualizada de chegada (ETA) ao destino final{local_destino} é para a data de {eta_input}{modalidade_door}.{texto_transbordo}
-
-Para acompanhar as movimentações do navio em tempo real, acesse o rastreamento oficial através do link abaixo:
+Rastreio do armador:
 {link_direto}
-
-Qualquer dúvida, a nossa equipe está à disposição!
 
 Atenciosamente,
 Equipe DC Logistics Brasil"""
@@ -147,14 +143,11 @@ Equipe DC Logistics Brasil"""
                 elif status_input == "Em trânsito":
                     corpo_email = f"""Prezado cliente,
 
-Gostaríamos de atualizar que a carga do processo {processo_input} (Contêiner: {container_input.upper()}) segue sua viagem normalmente e encontra-se em trânsito marítimo.
+Informamos que a carga referente ao processo {processo_input} (Contêiner: {container_input.upper()}), embarcada no porto de Santos, encontra-se em trânsito marítimo.
+A previsão de chegada no destino final{local_destino} é {eta_input}{modalidade_door}{texto_transbordo}.
 
-A nossa estimativa de chegada (ETA){local_destino} permanece para o dia {eta_input}{modalidade_door}.{texto_transbordo}
-
-Pode continuar a acompanhar o status através do link de rastreamento do armador:
+Rastreio do armador:
 {link_direto}
-
-Qualquer necessidade, não hesite em nos contactar.
 
 Atenciosamente,
 Equipe DC Logistics Brasil"""
@@ -162,14 +155,11 @@ Equipe DC Logistics Brasil"""
                 elif status_input == "Em desova no porto de transbordo":
                     corpo_email = f"""Prezado cliente,
 
-Entramos em contacto para informar que o contêiner {container_input.upper()} (Processo: {processo_input}) chegou ao porto de transbordo e encontra-se em etapa de desova/movimentação.
+Informamos que a carga referente ao processo {processo_input} (Contêiner: {container_input.upper()}) chegou ao porto de transbordo e encontra-se em etapa de desova/movimentação.
+A previsão de chegada no destino final{local_destino} é {eta_input}{modalidade_door}.
 
-A previsão de chegada no destino final{local_destino} após esta etapa é {eta_input}{modalidade_door}.
-
-Acompanhe os próximos passos da carga pelo rastreio abaixo:
+Rastreio do armador:
 {link_direto}
-
-Seguimos à disposição para qualquer esclarecimento.
 
 Atenciosamente,
 Equipe DC Logistics Brasil"""
@@ -177,14 +167,11 @@ Equipe DC Logistics Brasil"""
                 elif status_input == "Liberado na Alfândega":
                     corpo_email = f"""Prezado cliente,
 
-Temos boas notícias! Informamos que a carga referente ao processo {processo_input} (Contêiner: {container_input.upper()}) foi parametrizada e encontra-se devidamente liberada na alfândega.
+Informamos que a carga referente ao processo {processo_input} (Contêiner: {container_input.upper()}) encontra-se liberada na alfândega.
+A carga segue para a próxima etapa logística{modalidade_door}.
 
-A carga segue agora o trâmite normal para a próxima etapa logística{modalidade_door}.
-
-Caso queira consultar o histórico no armador, segue o link:
+Rastreio do armador:
 {link_direto}
-
-Nossa equipa continua acompanhando de perto. Qualquer dúvida, estamos à disposição.
 
 Atenciosamente,
 Equipe DC Logistics Brasil"""
@@ -192,14 +179,10 @@ Equipe DC Logistics Brasil"""
                 elif status_input == "Disponível para Retirada":
                     corpo_email = f"""Prezado cliente,
 
-Gostaríamos de informar que o contêiner {container_input.upper()} (Processo: {processo_input}) concluiu todas as etapas e já se encontra DISPONÍVEL PARA RETIRADA{local_destino}.
+Informamos que a carga referente ao processo {processo_input} (Contêiner: {container_input.upper()}) encontra-se disponível para retirada{local_destino}{modalidade_door}.
 
-Por favor, procedam com as programações de transporte necessárias de acordo com a modalidade contratada{modalidade_door}.
-
-Rastreio para consulta final:
+Rastreio do armador:
 {link_direto}
-
-Agradecemos a confiança em nossos serviços e seguimos à disposição!
 
 Atenciosamente,
 Equipe DC Logistics Brasil"""
@@ -224,7 +207,7 @@ Equipe DC Logistics Brasil"""
                 st.markdown(f"### 🔗 [Clique aqui para abrir o rastreio direto no site da {armador_encontrado}]({link_direto})")
                 
                 if btn_email:
-                    st.text_area("Modelo de E-mail Pronto para Copiar:", value=corpo_email, height=350)
+                    st.text_area("Modelo de E-mail Pronto para Copiar:", value=corpo_email, height=250)
                 
                 st.markdown("---")
                 st.subheader("🕒 Histórico de Atualizações desta Carga")
