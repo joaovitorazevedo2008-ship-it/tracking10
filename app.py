@@ -51,4 +51,4 @@ st.markdown("Digite o número do contêiner e a IA identifica o armador e gera o
 
 aba1, aba2 = st.tabs(["🔍 Consulta Rápida por Prefixo", "📋 Painel e Histórico"])
 
-with aba1
+with aba1:
