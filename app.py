@@ -13,18 +13,24 @@ def identificar_armador(container):
     
     prefixo = container.strip()[:4].upper()
     
-    if prefixo in ["MSCU"]:
+    if prefixo in ["MSCU", "MEDU"]:
         return "MSC", f"https://www.msc.com/en/track-a-shipment?trackingNumber={container.strip()}"
-    elif prefixo in ["MRKU", "MAEU", "MSMU"]:
+    elif prefixo in ["MAEU", "MSKU", "MRKU", "APMU", "PONU", "SEAU", "POCU", "OCLU", "NZSU"]:
         return "Maersk", f"https://www.maersk.com/tracking/{container.strip()}"
-    elif prefixo in ["HLXU", "HLCU"]:
+    elif prefixo in ["HLCU", "HLXU", "HLBU", "AZLU", "CACU", "CASU", "CMUU", "CPSU", "CSQU", "DALU"]:
         return "Hapag-Lloyd", f"https://www.hapag-lloyd.com/en/online-business/track/track-by-container.html?container={container.strip()}"
-    elif prefixo in ["CMAU", "CGMU", "MEDU", "TGHU"]:
+    elif prefixo in ["CMAU", "CGMU", "CGHU", "CMNU", "ECMU", "AMCU", "TGHU"]:
         return "CMA CGM", f"https://www.cma-cgm.com/ebusiness/tracking/search?SearchBy=Container&SearchValue={container.strip()}"
-    elif prefixo in ["ONEU", "NYKU", "PONU", "MSKU"]:
+    elif prefixo in ["ONEU", "NYKU"]:
         return "ONE (Ocean Network Express)", f"https://ecomm.one-line.com/ecom/CUP_HOM_3301.do?sessLocale=en&bkgNo={container.strip()}"
-    elif prefixo in ["COSU", "CBHU", "FCIU"]:
+    elif prefixo in ["COSU", "CSLU", "CSNU", "CBHU", "FCIU"]:
         return "COSCO", f"https://elines.coscoshipping.com/ebusiness/cargoTracking?trackingType=CONTAINER&trackingNumber={container.strip()}"
+    elif prefixo in ["EMCU", "EISU", "EGHU"]:
+        return "Evergreen", f"https://ct.shipmentlink.com/servlet/CT31_q?cntr_no={container.strip()}"
+    elif prefixo in ["ZIMU", "GSLU"]:
+        return "ZIM", f"https://www.zim.com/tools/track-a-shipment?consignmentnumber={container.strip()}"
+    elif prefixo == "YMLU":
+        return "Yang Ming", f"https://www.yangming.com/e-service/track_trace/track_trace_cargo_tracking.aspx?tno={container.strip()}"
     else:
         return "Outro / Não Mapeado", f"https://www.google.com/search?q=tracking+container+{container.strip()}"
 
@@ -86,7 +92,7 @@ Sua Equipe de Logística"""
 
                 st.text_area("Modelo de E-mail Pronto para Copiar:", value=corpo_email, height=220)
                 
-                # Salva no histórico
+                # Salva no histórico sem usar global
                 nova_linha = {
                     "Processo": processo_input,
                     "Container": container_input.upper(),
@@ -95,7 +101,6 @@ Sua Equipe de Logística"""
                     "Status": status_input,
                     "E-mail Pronto": "Gerado"
                 }
-                
                 df_tracking = pd.concat([df_tracking, pd.DataFrame([nova_linha])], ignore_index=True)
                 salvar_dados(df_tracking)
             else:
