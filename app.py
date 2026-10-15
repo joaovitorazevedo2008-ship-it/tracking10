@@ -18,7 +18,6 @@ if not st.session_state["autenticado"]:
         btn_login = st.form_submit_button("Entrar")
         
         if btn_login:
-            # Credenciais atualizadas
             if usuario == "DCLOG" and senha == "DCTRACKING":
                 st.session_state["autenticado"] = True
                 st.rerun()
@@ -30,7 +29,6 @@ if not st.session_state["autenticado"]:
 
 ARQUIVO_DADOS = "dados_tracking_prefixos.csv"
 
-# Função para identificar o armador pelo prefixo do contêiner
 def identificar_armador(container):
     if not container or len(container.strip()) < 4:
         return "Desconhecido", "#"
@@ -59,29 +57,34 @@ def identificar_armador(container):
         return "Outro / Não Mapeado", f"https://www.google.com/search?q=tracking+container+{container.strip()}"
 
 def carregar_dados():
+    colunas_padrao = ["Processo", "Container", "Armador Detectado", "Link de Rastreio", "Status", "Porto de Transbordo", "Data Transbordo", "Destino Final", "ETA Destino", "E-mail Pronto"]
     if os.path.exists(ARQUIVO_DADOS):
-        return pd.read_csv(ARQUIVO_DADOS)
+        df = pd.read_csv(ARQUIVO_DADOS)
+        # Adiciona colunas novas caso seja um arquivo antigo
+        for col in colunas_padrao:
+            if col not in df.columns:
+                df[col] = ""
+        return df
     else:
-        return pd.DataFrame(columns=["Processo", "Container", "Armador Detectado", "Link de Rastreio", "Status", "E-mail Pronto"])
+        return pd.DataFrame(columns=colunas_padrao)
 
 def salvar_dados(df):
     df.to_csv(ARQUIVO_DADOS, index=False)
 
 df_tracking = carregar_dados()
 
-# Botão de sair (Logout) no canto superior direito
 col_titulo, col_sair = st.columns([8, 1])
 with col_titulo:
     st.title("⚓ RASTREAMENTO DE CONTÊINERES")
 with col_sair:
-    st.write("") # Espaço em branco
+    st.write("") 
     if st.button("🚪 Sair"):
         st.session_state["autenticado"] = False
         st.rerun()
 
-st.markdown("Digite o número do contêiner e a IA identifica o armador e gera o link direto para a consulta instantânea!")
+st.markdown("Gerencie suas cargas, atualize informações e gere relatórios instantâneos de rastreamento.")
 
-aba1, aba2 = st.tabs(["🔍 Consulta Rápida por Prefixo", "📋 Painel e Histórico"])
+aba1, aba2, aba3 = st.tabs(["🔍 Consulta e E-mail", "📋 Painel e Histórico", "✏️ Editar Informações"])
 
 with aba1:
     st.subheader("Insira os dados da carga")
@@ -101,74 +104,4 @@ with aba1:
                 "Embarcado",
                 "Em desova no porto de transbordo"
             ])
-            destino_final_input = st.text_input("Destino Final")
-            eta_input = st.text_input("Previsão de Chegada (ETA) no Destino Final", value="DD/MM/AAAA")
-            
-        btn_analisar = st.form_submit_button("Identificar Armador e Gerar Link")
-        
-        if btn_analisar:
-            if container_input:
-                armador_encontrado, link_direto = identificar_armador(container_input)
-                
-                st.success(f"Armador identificado com sucesso: **{armador_encontrado}**")
-                
-                st.markdown(f"### 🔗 [Clique aqui para abrir o rastreio direto no site da {armador_encontrado}]({link_direto})")
-                
-                corpo_email = f"""Prezado(a) Cliente,
-
-Gostaríamos de atualizar o status do processo {processo_input}:
-
-• Contêiner: {container_input.upper()}
-• Porto de Transbordo: {porto_transbordo_input}
-• Chegada no Transbordo: {data_transbordo_input}
-• Destino Final: {destino_final_input}
-• Previsão de Chegada no Destino: {eta_input}
-• Status Atual: {status_input}
-
-Você pode acompanhar o rastreio oficial clicando no link abaixo:
-{link_direto}
-
-Qualquer dúvida, estamos à disposição.
-Atenciosamente,
-Sua Equipe de Logística"""
-
-                st.text_area("Modelo de E-mail Pronto para Copiar:", value=corpo_email, height=270)
-                
-                # Salvar a nova atualização
-                nova_linha = {
-                    "Processo": processo_input,
-                    "Container": container_input.upper(),
-                    "Armador Detectado": armador_encontrado,
-                    "Link de Rastreio": link_direto,
-                    "Status": status_input,
-                    "E-mail Pronto": "Gerado"
-                }
-                df_tracking = pd.concat([df_tracking, pd.DataFrame([nova_linha])], ignore_index=True)
-                salvar_dados(df_tracking)
-                
-                # --- EXIBIR HISTÓRICO DA REFERÊNCIA ---
-                st.markdown("---")
-                st.subheader("🕒 Histórico de Atualizações desta Carga")
-                
-                # Filtra os registos pelo Contêiner ou pelo Processo (se preenchido)
-                if processo_input:
-                    historico_ref = df_tracking[(df_tracking['Container'] == container_input.upper()) | (df_tracking['Processo'] == processo_input)]
-                else:
-                    historico_ref = df_tracking[df_tracking['Container'] == container_input.upper()]
-                
-                st.dataframe(historico_ref, use_container_width=True)
-                # ----------------------------------------
-                
-            else:
-                st.error("Por favor, informe o número do contêiner.")
-
-with aba2:
-    st.subheader("Histórico de Contêineres Consultados (Geral)")
-    if df_tracking.empty:
-        st.info("Nenhum contêiner consultado ainda.")
-    else:
-        st.dataframe(df_tracking, use_container_width=True)
-        if st.button("🗑️ Limpar Histórico"):
-            if os.path.exists(ARQUIVO_DADOS):
-                os.remove(ARQUIVO_DADOS)
-            st.rerun()
+            destino_final
