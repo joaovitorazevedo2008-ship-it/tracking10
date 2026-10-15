@@ -9,7 +9,7 @@ if "autenticado" not in st.session_state:
     st.session_state["autenticado"] = False
 
 if not st.session_state["autenticado"]:
-    st.title("🔒 Acesso Restrito")
+    st.title("LOGIN TRACKING")
     st.markdown("Por favor, insira suas credenciais para acessar o sistema.")
     
     with st.form("login_form"):
