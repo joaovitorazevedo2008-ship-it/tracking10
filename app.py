@@ -266,11 +266,9 @@ if not df_tracking.empty:
 
 aba1, aba2, aba3 = st.tabs(["🚀 1. Registo e Preenchimento", "📋 2. Histórico Consolidado e Filtros", "✏️ 3. Edição Rápida"])
 
-aba1:
 with aba1:
     st.markdown("### ⚡ Preenchimento Rápido por Booking")
     
-    # Botão de Atalho para carregar o modelo Rexnord que você enviou
     if st.button("📥 Preencher com Dados do Booking Rexnord Exemplo"):
         st.session_state["val_proc"] = "SSZ/CHI/1295477"
         st.session_state["val_origem"] = "SANTOS (EMBRAPORT)"
@@ -281,7 +279,6 @@ with aba1:
         st.success("✨ Dados do Booking Rexnord aplicados com sucesso nos campos abaixo!")
         st.rerun()
 
-    # Inicializa os valores na sessão caso estejam vazios
     for k, v in [("val_proc", ""), ("val_origem", ""), ("val_data_origem", ""), ("val_destino", ""), ("val_eta", "DD/MM/AAAA"), ("val_modalidade", "")]:
         if k not in st.session_state: st.session_state[k] = v
 
