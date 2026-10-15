@@ -3,24 +3,19 @@ import pandas as pd
 import os
 from datetime import datetime, date
 
-# Configuração inicial da página com tema forçado para claro
-st.set_page_config(
-    page_title="Rastreamento de Contêineres", 
-    page_icon="⚓", 
-    layout="wide", 
-    initial_sidebar_state="expanded"
-)
+# Configuração inicial da página
+st.set_page_config(page_title="Rastreamento de Contêineres", page_icon="⚓", layout="wide", initial_sidebar_state="expanded")
 
-# --- DESIGN CORPORATIVO FORÇADO (AZUL, AMARELO E BRANCO) ---
+# --- DESIGN CORPORATIVO E PADRONIZADO (AZUL, AMARELO E BRANCO) ---
 st.markdown("""
     <style>
-    /* Força o fundo da aplicação e containers para Branco/Claro */
-    .stApp, [data-testid="stAppViewContainer"], [data-testid="stHeader"] {
-        background-color: #F8FAFC !important;
+    /* Fundo da aplicação corporativo */
+    .stApp {
+        background-color: #F8FAFC;
     }
     
-    /* Força todos os textos corporativos em Azul Escuro */
-    .stApp p, .stApp span, .stApp div, .stApp label, h1, h2, h3, h4, h5, h6, .stMarkdown {
+    /* Textos gerais e títulos em Azul Escuro */
+    .stApp, p, span, div, label, h1, h2, h3, h4, h5, .stMarkdown {
         color: #002B5B !important;
     }
 
@@ -82,8 +77,8 @@ st.markdown("""
         -webkit-text-fill-color: #FFD633 !important;
     }
 
-    /* TODOS OS BOTÕES DO SISTEMA (Fundo Azul e Escrita Amarela) */
-    button[kind="primary"], button[kind="secondary"], .stFormSubmitButton button, div.stButton > button {
+    /* BOTÕES DO SISTEMA (Fundo Azul e Escrita Amarela) */
+    button[kind="primary"], button[kind="secondary"], .stFormSubmitButton button {
         background-color: #002B5B !important;
         color: #FFC000 !important;
         border: 2px solid #FFC000 !important;
@@ -94,7 +89,7 @@ st.markdown("""
         -webkit-text-fill-color: #FFC000 !important;
         box-shadow: 0 2px 4px rgba(0,0,0,0.05);
     }
-    button[kind="primary"]:hover, button[kind="secondary"]:hover, .stFormSubmitButton button:hover, div.stButton > button:hover {
+    button[kind="primary"]:hover, button[kind="secondary"]:hover, .stFormSubmitButton button:hover {
         background-color: #003F88 !important;
         color: #FFD633 !important;
         -webkit-text-fill-color: #FFD633 !important;
@@ -132,7 +127,7 @@ st.markdown("""
         border-left: 4px solid #FFC000 !important;
     }
 
-    /* Força padronização das tabelas em tema claro */
+    /* Padronização das Tabelas */
     [data-testid="stDataFrame"], [data-testid="stTable"] {
         background-color: #FFFFFF !important;
         border: 1px solid #CBD5E1 !important;
@@ -265,6 +260,7 @@ if not df_tracking.empty:
     st.markdown("### 📊 Visão Geral da Operação (Clique para Filtrar)")
     col_m1, col_m2, col_m3 = st.columns(3)
     
+    # Inicializa o filtro do dashboard na sessão
     if "filtro_dashboard" not in st.session_state:
         st.session_state["filtro_dashboard"] = "Todos"
 
@@ -412,4 +408,68 @@ with aba1:
                     "Destino Final": destino_final_input,
                     "ETA Destino": eta_input,
                     "DOOR/RAMP": door_ramp_input,
-                    "
+                    "E-mail Pronto": "Gerado",
+                    "Alerta ETA": alerta_status_eta
+                }
+                df_tracking = pd.concat([df_tracking, pd.DataFrame([nova_linha])], ignore_index=True)
+                salvar_dados(df_tracking)
+                
+                st.info(f"⛴️ **Armador Identificado:** {armador_encontrado} | [Aceder ao rastreamento oficial]({link_direto})")
+                
+                if btn_email:
+                    st.text_area("📋 Modelo de E-mail Pronto para Copiar:", value=corpo_email, height=150)
+                
+                st.markdown("---")
+                st.subheader("🕒 Histórico Recente do Processo")
+                historico_ref = df_tracking[(df_tracking['Container'] == container_input.upper()) | (df_tracking['Processo'].astype(str).str.upper() == ref_atual)]
+                st.dataframe(historico_ref, use_container_width=True)
+                
+            else:
+                st.error("⚠️ Por favor, informe o Nº do Contêiner.")
+
+with aba2:
+    st.subheader("Histórico Consolidado e Prazos")
+    if df_tracking.empty:
+        st.info("Nenhum registo encontrado na base de dados.")
+    else:
+        df_tracking['Processo'] = df_tracking['Processo'].astype(str).str.upper()
+        df_tracking['Container'] = df_tracking['Container'].astype(str).str.upper()
+        df_tracking['Alerta ETA'] = df_tracking['ETA Destino'].apply(calcular_alerta_eta)
+        
+        # Aplica o filtro selecionado pelos botões do dashboard
+        modo_filtro = st.session_state.get("filtro_dashboard", "Todos")
+        if modo_filtro == "Transito":
+            df_exibicao = df_tracking[df_tracking['Status'].isin(["Em trânsito", "A caminho do destino final"])]
+            st.markdown("📌 *Exibindo apenas cargas em trânsito/viagem (Filtro do Dashboard ativo)*")
+        elif modo_filtro == "Liberados":
+            df_exibicao = df_tracking[df_tracking['Status'].isin(["Liberado na Alfândega", "Disponível para Retirada", "Chegada confirmada"])]
+            st.markdown("📌 *Exibindo apenas cargas liberadas ou disponíveis (Filtro do Dashboard ativo)*")
+        else:
+            df_exibicao = df_tracking
+            st.markdown("📌 *Exibindo todos os registos ativos*")
+
+        st.dataframe(df_exibicao, use_container_width=True)
+        
+        col_f1, col_f2 = st.columns([2, 1])
+        with col_f2:
+            if st.button("🗑️ Limpar Todos os Registros"):
+                if os.path.exists(ARQUIVO_DADOS):
+                    os.remove(ARQUIVO_DADOS)
+                st.rerun()
+
+with aba3:
+    st.subheader("Edição Rápida da Base")
+    st.markdown("Abaixo constam apenas os registos mais recentes de cada contêiner. Edite diretamente nas células e clique em salvar.")
+    
+    if df_tracking.empty:
+        st.info("Não há dados disponíveis para edição.")
+    else:
+        df_latest = df_tracking.drop_duplicates(subset=['Container'], keep='last')
+        df_editado = st.data_editor(df_latest, use_container_width=True)
+        
+        if st.button("💾 Salvar Modificações"):
+            df_tracking.update(df_editado)
+            df_tracking['Alerta ETA'] = df_tracking['ETA Destino'].apply(calcular_alerta_eta)
+            salvar_dados(df_tracking)
+            st.success("Modificações gravadas com sucesso!")
+            st.rerun()
