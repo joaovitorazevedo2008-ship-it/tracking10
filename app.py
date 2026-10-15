@@ -57,9 +57,13 @@ def identificar_armador(container):
         return "Outro / Não Mapeado", f"https://www.google.com/search?q=tracking+container+{container.strip()}"
 
 def carregar_dados():
-    colunas_padrao = ["Processo", "Container", "Armador Detectado", "Link de Rastreio", "Status", "Porto de Transbordo", "Data Transbordo", "Destino Final", "ETA Destino", "E-mail Pronto"]
+    # Removido o "Link de Rastreio" das colunas salvas
+    colunas_padrao = ["Processo", "Container", "Armador Detectado", "Status", "Porto de Transbordo", "Data Transbordo", "Destino Final", "ETA Destino", "E-mail Pronto"]
     if os.path.exists(ARQUIVO_DADOS):
         df = pd.read_csv(ARQUIVO_DADOS)
+        # Se o arquivo antigo ainda tiver a coluna do link, o sistema apaga ela aqui automaticamente
+        if "Link de Rastreio" in df.columns:
+            df = df.drop(columns=["Link de Rastreio"])
         # Adiciona colunas novas caso seja um arquivo antigo
         for col in colunas_padrao:
             if col not in df.columns:
@@ -114,6 +118,8 @@ with aba1:
                 armador_encontrado, link_direto = identificar_armador(container_input)
                 
                 st.success(f"Armador identificado com sucesso: **{armador_encontrado}**")
+                
+                # O link continua a aparecer aqui no ecrã e no e-mail!
                 st.markdown(f"### 🔗 [Clique aqui para abrir o rastreio direto no site da {armador_encontrado}]({link_direto})")
                 
                 corpo_email = f"""Prezado(a) Cliente,
@@ -136,12 +142,11 @@ Sua Equipe de Logística"""
 
                 st.text_area("Modelo de E-mail Pronto para Copiar:", value=corpo_email, height=270)
                 
-                # Salvar a nova atualização com todos os dados
+                # Salvar a nova atualização (sem a coluna de link)
                 nova_linha = {
                     "Processo": processo_input,
                     "Container": container_input.upper(),
                     "Armador Detectado": armador_encontrado,
-                    "Link de Rastreio": link_direto,
                     "Status": status_input,
                     "Porto de Transbordo": porto_transbordo_input,
                     "Data Transbordo": data_transbordo_input,
@@ -183,7 +188,7 @@ with aba3:
     if df_tracking.empty:
         st.info("Ainda não há dados para editar.")
     else:
-        # Tabela editável
+        # Tabela editável agora sem a coluna do link
         df_editado = st.data_editor(df_tracking, use_container_width=True, num_rows="dynamic")
         
         if st.button("💾 Salvar Alterações na Base de Dados", type="primary"):
