@@ -2,7 +2,6 @@ import streamlit as st
 import pandas as pd
 import os
 from datetime import datetime, date
-import io
 
 # Tenta importar a biblioteca de leitura de PDF
 try:
@@ -176,8 +175,8 @@ if not st.session_state["autenticado"]:
 # --- BARRA LATERAL ---
 with st.sidebar:
     st.markdown("### 📖 Guia do Sistema")
-    st.markdown("**1️⃣ Pesquisa/Upload:** Procure por referência ou faça upload do PDF de Booking para preenchimento automático.")
-    st.markdown("**2️⃣ Atualização:** Insira o contêiner, status e prazos.")
+    st.markdown("**1️⃣ Pesquisa/Upload:** Procure por referência ou faça upload do PDF de Booking para preencher os dados de destino, datas e portos automaticamente.")
+    st.markdown("**2️⃣ Atualização:** Insira o contêiner manualmente, status e prazos.")
     st.markdown("**3️⃣ Comunicação:** Salve e gere e-mails padronizados instantaneamente.")
     st.markdown("---")
     if st.button("🚪 Encerrar Sessão"):
@@ -281,13 +280,15 @@ with aba1:
         st.session_state["ref_pesquisada"] = ""
     if "liberar_formulario" not in st.session_state:
         st.session_state["liberar_formulario"] = False
-    if "pdf_container_extraido" not in st.session_state:
-        st.session_state["pdf_container_extraido"] = ""
+    
+    # Variáveis para armazenar dados extraídos do PDF (destino, datas, etc.)
+    if "pdf_texto_extraido" not in st.session_state:
+        st.session_state["pdf_texto_extraido"] = ""
 
-    # Opção de UPLOAD DE BOOKING (PDF)
+    # Opção de UPLOAD DE BOOKING (PDF) para preencher datas e destinos
     if has_pypdf:
         st.markdown("#### 📄 Automação por PDF (Booking Confirmation)")
-        arquivo_pdf = st.file_uploader("Faça o upload do Booking em PDF para preenchimento automático", type=["pdf"])
+        arquivo_pdf = st.file_uploader("Faça o upload do Booking em PDF para preencher dados de destino, datas e portos", type=["pdf"])
         if arquivo_pdf is not None:
             try:
                 leitor = PdfReader(arquivo_pdf)
@@ -295,14 +296,8 @@ with aba1:
                 for pagina in leitor.pages:
                     texto_pdf += pagina.extract_text() or ""
                 
-                # Extração simples de contêiner baseada em padrão de 4 letras + 7 números
-                import re
-                padrao_container = re.search(r'[A-Z]{4}\d{7}', texto_pdf.upper())
-                if padrao_container:
-                    st.session_state["pdf_container_extraido"] = padrao_container.group(0)
-                    st.success(f"✨ Contêiner **{st.session_state['pdf_container_extraido']}** detetado automaticamente no PDF!")
-                else:
-                    st.warning("⚠️ Não foi possível identificar um contêiner no formato padrão (ex: MSCU1234567) neste PDF.")
+                st.session_state["pdf_texto_extraido"] = texto_pdf
+                st.success("✨ PDF carregado com sucesso! Preencha a referência abaixo para aplicar os dados.")
             except Exception as e:
                 st.error(f"Erro ao ler o ficheiro PDF: {e}")
         st.markdown("---")
@@ -323,8 +318,7 @@ with aba1:
         ref_atual = st.session_state["ref_pesquisada"]
         filtro_proc = df_tracking[df_tracking['Processo'].astype(str).str.upper() == ref_atual]
         
-        # Se veio contêiner extraído do PDF, usa ele como padrão se não houver no banco
-        def_container = st.session_state.get("pdf_container_extraido", "")
+        def_container = ""
         def_porto = ""
         def_data_t = ""
         def_dest = ""
@@ -345,7 +339,7 @@ with aba1:
 
         if not filtro_proc.empty:
             ultimo_reg = filtro_proc.iloc[-1]
-            def_container = str(ultimo_reg.get("Container", "")) or def_container
+            def_container = str(ultimo_reg.get("Container", ""))
             def_porto = str(ultimo_reg.get("Porto de Transbordo", ""))
             def_data_t = str(ultimo_reg.get("Data Transbordo", ""))
             def_dest = str(ultimo_reg.get("Destino Final", ""))
@@ -370,7 +364,7 @@ with aba1:
             
             col1, col2 = st.columns(2)
             with col1:
-                container_input = st.text_input("Nº do Contêiner", value=def_container, help="Formato ex.: MSCU1234567")
+                container_input = st.text_input("Nº do Contêiner (Digite manualmente)", value=def_container, help="Formato ex.: MSCU1234567")
                 porto_transbordo_input = st.text_input("Porto de Transbordo", value=def_porto)
                 data_transbordo_input = st.text_input("Data no Transbordo", value=def_data_t)
                 
