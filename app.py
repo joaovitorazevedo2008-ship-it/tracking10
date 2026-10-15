@@ -298,37 +298,45 @@ with aba1:
                 if match_dc:
                     st.session_state["auto_processo"] = match_dc.group(0)
                 else:
-                    # Alternativa: se não achar DC exato, procura por booking ou referência geral
                     match_proc = re.search(r'Booking\s*\|\s*([A-Z0-9/]+)', texto_pdf)
                     if match_proc:
                         st.session_state["auto_processo"] = match_proc.group(1).strip()
 
-                # 2. Extrai Porto de Origem / Transbordo (Ex: SANTOS, SP)
-                match_origem = re.search(r'Porto de Loading\s*\|\s*([A-Z\s,/-]+)', texto_pdf)
-                if match_origem:
-                    st.session_state["auto_origem"] = match_origem.group(1).strip().split('\n')[0]
+                # 2. Extrai Porto de Loading / Origem (Ex: SANTOS)
+                match_loading = re.search(r'Porto de Loading\s*\|\s*([A-Z\s,/-]+)', texto_pdf)
+                if match_loading:
+                    st.session_state["auto_origem"] = match_loading.group(1).strip().split('\n')[0]
+                else:
+                    # Alternativa baseada no formato do PDF (Ex: SANTOS, SP / EMBRAPORT)
+                    if "SANTOS" in texto_pdf.upper():
+                        st.session_state["auto_origem"] = "SANTOS"
 
-                # 3. Extrai Destino Final (Ex: INDIANAPOLIS)
+                # 3. Extrai Destino Final (Ex: INDIANAPOLIS ou Port of Discharge)
                 match_dest = re.search(r'Destino Final\s*\|\s*([A-Z\s,]+)', texto_pdf)
                 if match_dest:
-                    st.session_state["auto_destino"] = match_dest.group(1).strip().split('\n')[0]
-                
+                    st.session_state["auto_dest"] = match_dest.group(1).strip().split('\n')[0]
+                    st.session_state["auto_destino"] = st.session_state["auto_dest"]
+                else:
+                    match_pod = re.search(r'Port of Discharge\s*\|\s*([A-Z\s,]+)', texto_pdf)
+                    if match_pod:
+                        st.session_state["auto_destino"] = match_pod.group(1).strip().split('\n')[0]
+
                 # 4. Extrai Datas (ETD e ETA)
                 match_datas = re.findall(r'\d{2}/\d{2}/\d{4}', texto_pdf)
                 if match_datas:
                     if len(match_datas) >= 2:
-                        st.session_state["auto_data_origem"] = match_datas[0]  # ETD / Data Transbordo
-                        st.session_state["auto_eta"] = match_datas[-1]         # ETA Destino
+                        st.session_state["auto_data_origem"] = match_datas[0]  # ETD
+                        st.session_state["auto_eta"] = match_datas[-1]         # ETA
                     else:
                         st.session_state["auto_eta"] = match_datas[0]
 
-                # 5. Extrai Modalidade (Ex: Ramp)
+                # 5. Extrai Modalidade (Ex: Ramp / Door)
                 if "Ramp" in texto_pdf:
                     st.session_state["auto_modalidade"] = "Ramp"
                 elif "Door" in texto_pdf:
                     st.session_state["auto_modalidade"] = "Door"
 
-                st.success("✨ Processo, transbordo, destinos e datas preenchidos automaticamente do PDF!")
+                st.success("✨ Processo, transbordo, destinos e datas extraídos e aplicados com sucesso!")
             except Exception as e:
                 st.error(f"Erro ao processar o PDF: {e}")
         st.markdown("---")
@@ -452,7 +460,7 @@ with aba2:
         
         col_f1, col_f2 = st.columns([2, 1])
         with col_f2:
-            if st.button("🗑️ Limpar Todos los Registros"):
+            if st.button("🗑️ Limpar Todos os Registros"):
                 if os.path.exists(ARQUIVO_DADOS):
                     os.remove(ARQUIVO_DADOS)
                 st.rerun()
