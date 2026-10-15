@@ -5,7 +5,7 @@ import os
 # Configuração inicial da página
 st.set_page_config(page_title="Rastreamento de Contêineres", page_icon="⚓", layout="wide", initial_sidebar_state="expanded")
 
-# --- DESIGN CUSTOMIZADO SEGURO E BONITO (AZUL, AMARELO E BRANCO) ---
+# --- DESIGN CUSTOMIZADO (GARANTINDO TEXTO VISÍVEL E CORES CORRETAS) ---
 st.markdown("""
     <style>
     /* Fundo da aplicação Branco */
@@ -13,10 +13,9 @@ st.markdown("""
         background-color: #FFFFFF;
     }
     
-    /* Títulos em Azul Escuro */
-    h1, h2, h3, h4, h5 {
+    /* Força todos os textos, títulos e labels a ficarem visíveis em Azul Escuro */
+    .stApp, p, span, div, label, h1, h2, h3, h4, h5, .stMarkdown {
         color: #003366 !important;
-        font-weight: 800 !important;
     }
 
     /* Botão Principal (Amarelo com texto Azul) */
@@ -49,25 +48,33 @@ st.markdown("""
         transform: scale(1.02);
     }
 
-    /* Abas Superiores */
+    /* Abas Superiores com texto azul escuro e legível */
     .stTabs [data-baseweb="tab-list"] {
         border-bottom: 3px solid #FFC000;
+        background-color: #F8FAFC;
+    }
+    .stTabs [data-baseweb="tab"] {
+        color: #003366 !important;
+        font-weight: bold;
     }
     .stTabs [aria-selected="true"] {
         background-color: #003366 !important;
         color: #FFFFFF !important;
         border-radius: 8px 8px 0 0 !important;
     }
+    .stTabs [aria-selected="true"] * {
+        color: #FFFFFF !important;
+    }
 
-    /* Barra Lateral Clara (Para não bugar o texto) */
+    /* Barra Lateral Clara */
     [data-testid="stSidebar"] {
         background-color: #F4F7F9 !important;
     }
     
-    /* Alertas Sucesso/Info com detalhe amarelo */
+    /* Alertas */
     [data-testid="stAlert"] {
         border-left: 5px solid #FFC000 !important;
-        box-shadow: 0px 2px 4px rgba(0,0,0,0.05);
+        background-color: #F8FAFC !important;
     }
     </style>
 """, unsafe_allow_html=True)
@@ -78,8 +85,8 @@ if "autenticado" not in st.session_state:
     st.session_state["autenticado"] = False
 
 if not st.session_state["autenticado"]:
-    st.markdown("<h1 style='text-align: center;'>⚓ LOGIN TRACKING</h1>", unsafe_allow_html=True)
-    st.markdown("<p style='text-align: center;'>Bem-vindo(a)! Insira suas credenciais para continuar.</p>", unsafe_allow_html=True)
+    st.markdown("<h1 style='text-align: center; color: #003366;'>⚓ LOGIN TRACKING</h1>", unsafe_allow_html=True)
+    st.markdown("<p style='text-align: center; color: #003366;'>Bem-vindo(a)! Insira suas credenciais para continuar.</p>", unsafe_allow_html=True)
     
     col1, col2, col3 = st.columns([1, 1, 1])
     with col2:
@@ -104,9 +111,6 @@ with st.sidebar:
     st.markdown("**2️⃣ Preencha os Dados:** Atualize datas, status e destinos conforme a situação atual da carga.")
     st.markdown("**3️⃣ Geração de E-mail:** Escolha se quer apenas registrar no sistema ou se deseja gerar o texto pronto para enviar ao cliente.")
     st.markdown("---")
-    st.info("💡 **Dica:** Passe o mouse sobre os ícones de interrogação (?) nos campos para ver orientações sobre o preenchimento.")
-    st.write("")
-    st.write("")
     if st.button("🚪 Sair do Sistema"):
         st.session_state["autenticado"] = False
         st.rerun()
@@ -174,12 +178,15 @@ with aba1:
     def_door = ""
     def_status = "Embarcado"
     
+    # Lista de status atualizada com os novos itens solicitados
     status_opcoes = [
         "Embarcado",
         "Em trânsito", 
         "Em desova no porto de transbordo",
         "A caminho do destino final",
+        "Chegada confirmada",
         "Liberado na Alfândega", 
+        "Em inspeção alfandegária",
         "Disponível para Retirada"
     ]
     
@@ -242,6 +249,7 @@ with aba1:
                 data_t = f" para o dia {data_transbordo_input}" if data_transbordo_input else ""
                 frase_transbordo = f" Lembramos que a carga possui transbordo previsto no porto de {porto_transbordo_input}{data_t}."
 
+            # --- MODELOS DE E-MAIL ATUALIZADOS ---
             if status_input == "Embarcado":
                 corpo_email = f"Prezado cliente,\n\nInformamos que a carga referente ao processo {processo_input} (Contêiner: {container_input.upper()}) foi embarcada no porto de Santos.\n{frase_eta}{frase_transbordo}"
             elif status_input == "Em trânsito":
@@ -250,8 +258,12 @@ with aba1:
                 corpo_email = f"Prezado cliente,\n\nInformamos que a carga referente ao processo {processo_input} (Contêiner: {container_input.upper()}) chegou ao porto de transbordo e encontra-se em etapa de desova/movimentação.\n{frase_eta}"
             elif status_input == "A caminho do destino final":
                 corpo_email = f"Prezado cliente,\n\nInformamos que a carga referente ao processo {processo_input} (Contêiner: {container_input.upper()}) encontra-se a caminho do destino final{local_destino}.\n{frase_eta}"
+            elif status_input == "Chegada confirmada":
+                corpo_email = f"Prezado cliente,\n\nInformamos que a chegada da carga referente ao processo {processo_input} (Contêiner: {container_input.upper()}) foi confirmada no destino final{local_destino}{modalidade}."
             elif status_input == "Liberado na Alfândega":
                 corpo_email = f"Prezado cliente,\n\nInformamos que a carga referente ao processo {processo_input} (Contêiner: {container_input.upper()}) encontra-se liberada na alfândega.\nA carga segue para a próxima etapa logística{modalidade}."
+            elif status_input == "Em inspeção alfandegária":
+                corpo_email = f"Prezado cliente,\n\nInformamos que a carga referente ao processo {processo_input} (Contêiner: {container_input.upper()}) encontra-se atualmente em inspeção alfandegária.\nSeguimos a monitorizar o processo de perto."
             elif status_input == "Disponível para Retirada":
                 corpo_email = f"Prezado cliente,\n\nInformamos que a carga referente ao processo {processo_input} (Contêiner: {container_input.upper()}) encontra-se disponível para retirada{local_destino}{modalidade}."
 
@@ -299,19 +311,15 @@ with aba2:
 
 with aba3:
     st.subheader("Edição Rápida (Apenas Status Atual)")
-    st.markdown("Abaixo você vê **apenas a última atualização** de cada contêiner para não poluir a tela. Dê um **duplo clique** para editar e salve.")
+    st.markdown("Abaixo você vê **apenas a última atualização** de cada contêiner. Dê um **duplo clique** para editar e salve.")
     
     if df_tracking.empty:
         st.info("Não há dados para editar.")
     else:
-        # Filtra a base para mostrar apenas o registro mais recente de cada contêiner
         df_latest = df_tracking.drop_duplicates(subset=['Container'], keep='last')
-        
-        # Mostra o editor bloqueando adição de novas linhas para manter a integridade
         df_editado = st.data_editor(df_latest, use_container_width=True)
         
         if st.button("💾 Salvar Modificações", type="primary"):
-            # Atualiza o dataframe original apenas com as linhas que foram editadas
             df_tracking.update(df_editado)
             salvar_dados(df_tracking)
             st.success("Dados salvos e atualizados no banco!")
