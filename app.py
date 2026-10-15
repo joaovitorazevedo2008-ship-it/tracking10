@@ -6,22 +6,28 @@ from datetime import datetime, date
 # Configuração inicial da página
 st.set_page_config(page_title="Rastreamento de Contêineres", page_icon="⚓", layout="wide", initial_sidebar_state="expanded")
 
-# --- DESIGN CUSTOMIZADO (MANTENDO AS CORES E ELEVANDO O PROFISSIONALISMO) ---
+# --- DESIGN CORPORATIVO E PROFISSIONAL (AZUL, AMARELO E BRANCO) ---
 st.markdown("""
     <style>
-    /* Fundo da aplicação Branco */
+    /* Fundo da aplicação corporativo */
     .stApp {
-        background-color: #FFFFFF;
+        background-color: #F8FAFC;
     }
     
     /* Textos gerais e títulos em Azul Escuro */
     .stApp, p, span, div, label, h1, h2, h3, h4, h5, .stMarkdown {
-        color: #003366 !important;
+        color: #002B5B !important;
+    }
+
+    /* Títulos Principais */
+    h1 {
+        font-weight: 800 !important;
+        letter-spacing: -0.5px;
     }
 
     /* Campos de Entrada (Input, Text Area) - Fundo Azul e Borda Amarela com texto Amarelo */
     input, textarea, [data-baseweb="input"] input {
-        background-color: #003366 !important;
+        background-color: #002B5B !important;
         color: #FFC000 !important;
         border: 2px solid #FFC000 !important;
         border-radius: 8px !important;
@@ -31,7 +37,7 @@ st.markdown("""
 
     /* Caixa principal do Selectbox (Menu Suspenso) */
     div[data-baseweb="select"] > div {
-        background-color: #003366 !important;
+        background-color: #002B5B !important;
         color: #FFC000 !important;
         border: 2px solid #FFC000 !important;
         border-radius: 8px !important;
@@ -51,14 +57,14 @@ st.markdown("""
 
     /* POPUP/LISTA DE OPÇÕES DO SELECTBOX (Fundo azul com borda amarela) */
     div[data-baseweb="popover"], div[data-baseweb="menu"], ul[role="listbox"] {
-        background-color: #003366 !important;
+        background-color: #002B5B !important;
         border: 2px solid #FFC000 !important;
         border-radius: 8px !important;
     }
     
-    /* TODOS OS ITENS DE TEXTO DENTRO DA LISTA DO MENU */
+    /* ITENS DE TEXTO DENTRO DA LISTA DO MENU */
     div[data-baseweb="menu"] div, div[data-baseweb="menu"] span, ul[role="listbox"] li, ul[role="listbox"] span, div[role="option"] {
-        background-color: #003366 !important;
+        background-color: #002B5B !important;
         color: #FFC000 !important;
         -webkit-text-fill-color: #FFC000 !important;
         font-weight: 600 !important;
@@ -66,56 +72,73 @@ st.markdown("""
 
     /* Efeito ao passar o mouse por cima das opções do menu */
     ul[role="listbox"] li:hover, div[role="option"]:hover {
-        background-color: #004C99 !important;
+        background-color: #003F88 !important;
         color: #FFD633 !important;
         -webkit-text-fill-color: #FFD633 !important;
     }
 
-    /* TODOS OS BOTÕES DO SISTEMA (Fundo Azul e Escrita Amarela) */
+    /* BOTÕES DO SISTEMA (Fundo Azul e Escrita Amarela) */
     button[kind="primary"], button[kind="secondary"], .stFormSubmitButton button {
-        background-color: #003366 !important;
+        background-color: #002B5B !important;
         color: #FFC000 !important;
         border: 2px solid #FFC000 !important;
-        font-weight: 900 !important;
+        font-weight: 800 !important;
         border-radius: 8px !important;
         padding: 10px 20px !important;
-        transition: 0.3s;
+        transition: all 0.2s ease-in-out;
         -webkit-text-fill-color: #FFC000 !important;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.05);
     }
     button[kind="primary"]:hover, button[kind="secondary"]:hover, .stFormSubmitButton button:hover {
-        background-color: #004C99 !important;
+        background-color: #003F88 !important;
         color: #FFD633 !important;
         -webkit-text-fill-color: #FFD633 !important;
-        transform: scale(1.02);
+        transform: translateY(-1px);
+        box-shadow: 0 4px 8px rgba(0,0,0,0.1);
     }
 
-    /* Abas Superiores */
+    /* Abas Superiores Estilizadas */
     .stTabs [data-baseweb="tab-list"] {
-        border-bottom: 3px solid #FFC000;
-        background-color: #F8FAFC;
+        border-bottom: 2px solid #FFC000;
+        background-color: #FFFFFF;
+        border-radius: 8px 8px 0 0;
+        padding: 5px;
     }
     .stTabs [data-baseweb="tab"] {
-        color: #003366 !important;
-        font-weight: bold;
+        color: #002B5B !important;
+        font-weight: 700;
     }
     .stTabs [aria-selected="true"] {
-        background-color: #003366 !important;
+        background-color: #002B5B !important;
         color: #FFFFFF !important;
-        border-radius: 8px 8px 0 0 !important;
+        border-radius: 6px 6px 0 0 !important;
     }
     .stTabs [aria-selected="true"] * {
         color: #FFFFFF !important;
     }
 
-    /* Barra Lateral Clara */
+    /* Cartões / Containers Estilizados */
+    div[data-testid="stMetric"], .stForm, div[data-testid="stExpander"] {
+        background-color: #FFFFFF !important;
+        border: 1px solid #E2E8F0 !important;
+        border-radius: 10px !important;
+        padding: 20px !important;
+        box-shadow: 0px 2px 6px rgba(0, 43, 91, 0.04);
+        border-left: 4px solid #FFC000 !important;
+    }
+
+    /* Barra Lateral */
     [data-testid="stSidebar"] {
-        background-color: #F4F7F9 !important;
+        background-color: #FFFFFF !important;
+        border-right: 1px solid #E2E8F0;
     }
     
     /* Alertas */
     [data-testid="stAlert"] {
         border-left: 5px solid #FFC000 !important;
-        background-color: #F8FAFC !important;
+        background-color: #FFFFFF !important;
+        border-radius: 8px;
+        box-shadow: 0px 2px 4px rgba(0,0,0,0.02);
     }
     </style>
 """, unsafe_allow_html=True)
@@ -126,8 +149,8 @@ if "autenticado" not in st.session_state:
     st.session_state["autenticado"] = False
 
 if not st.session_state["autenticado"]:
-    st.markdown("<h1 style='text-align: center; color: #003366;'>⚓ LOGIN TRACKING</h1>", unsafe_allow_html=True)
-    st.markdown("<p style='text-align: center; color: #003366;'>Bem-vindo(a)! Insira suas credenciais para continuar.</p>", unsafe_allow_html=True)
+    st.markdown("<h1 style='text-align: center; color: #002B5B;'>⚓ LOGIN TRACKING</h1>", unsafe_allow_html=True)
+    st.markdown("<p style='text-align: center; color: #002B5B;'>Ambiente Corporativo Seguro - Insira suas credenciais.</p>", unsafe_allow_html=True)
     
     col1, col2, col3 = st.columns([1, 1, 1])
     with col2:
@@ -147,12 +170,12 @@ if not st.session_state["autenticado"]:
 
 # --- BARRA LATERAL DIDÁTICA ---
 with st.sidebar:
-    st.markdown("### 📖 Como usar?")
-    st.markdown("**1️⃣ Pesquisa de Referência:** Digite a referência e clique em pesquisar para abrir os dados ou cadastrar nova.")
-    st.markdown("**2️⃣ Preenchimento:** Informe o contêiner (para achar o armador), datas e status.")
-    st.markdown("**3️⃣ Ação:** Salve os dados ou gere o e-mail para o cliente.")
+    st.markdown("### 📖 Guia do Sistema")
+    st.markdown("**1️⃣ Pesquisa:** Informe a referência para abrir os dados cadastrados ou iniciar um novo registo.")
+    st.markdown("**2️⃣ Atualização:** Insira o contêiner (identificação automática do armador), status e prazos.")
+    st.markdown("**3️⃣ Comunicação:** Salve e gere e-mails padronizados instantaneamente.")
     st.markdown("---")
-    if st.button("🚪 Sair do Sistema"):
+    if st.button("🚪 Encerrar Sessão"):
         st.session_state["autenticado"] = False
         st.rerun()
 # -----------------------------------------
@@ -204,7 +227,6 @@ def calcular_alerta_eta(eta_str):
     if not eta_str or eta_str == "DD/MM/AAAA":
         return "A Confirmar"
     try:
-        # Tenta converter o formato DD/MM/AAAA
         data_eta = datetime.strptime(eta_str.strip(), "%d/%m/%Y").date()
         hoje = date.today()
         if data_eta < hoje:
@@ -218,9 +240,9 @@ def calcular_alerta_eta(eta_str):
 
 df_tracking = carregar_dados()
 
-st.title("⚓ RASTREAMENTO DE CONTÊINERES")
+st.title("⚓ GESTÃO DE RASTREAMENTO LOGÍSTICO")
 
-# --- DASHBOARD EXECUTIVO DE MÉTRICAS ---
+# --- DASHBOARD EXECUTIVO ---
 if not df_tracking.empty:
     df_ultimos = df_tracking.drop_duplicates(subset=['Container'], keep='last')
     total_cargas = len(df_ultimos)
@@ -229,17 +251,17 @@ if not df_tracking.empty:
     
     col_m1, col_m2, col_m3 = st.columns(3)
     with col_m1:
-        st.metric(label="📦 Total de Contêineres Ativos", value=total_cargas)
+        st.metric(label="📦 Contêineres Ativos", value=total_cargas)
     with col_m2:
-        st.metric(label="🚢 Cargas em Trânsito / Viagem", value=em_transito)
+        st.metric(label="🚢 Em Trânsito / Viagem", value=em_transito)
     with col_m3:
-        st.metric(label="✨ Cargas Liberadas / Disponíveis", value=liberadas)
-    st.markdown("---")
+        st.metric(label="✨ Liberados / Disponíveis", value=liberadas)
+    st.markdown("<br>", unsafe_allow_html=True)
 
-aba1, aba2, aba3 = st.tabs(["🚀 1. Buscar e Atualizar Carga", "📋 2. Histórico Geral com Alertas de ETA", "✏️ 3. Edição Rápida de Dados"])
+aba1, aba2, aba3 = st.tabs(["🚀 1. Consulta e Atualização", "📋 2. Histórico Consolidado", "✏️ 3. Edição Rápida"])
 
 with aba1:
-    st.markdown("### 🔍 Passo 1: Buscar por Referência / Processo")
+    st.markdown("### 🔍 Pesquisa de Referência / Processo")
     
     if "ref_pesquisada" not in st.session_state:
         st.session_state["ref_pesquisada"] = ""
@@ -247,7 +269,7 @@ with aba1:
         st.session_state["liberar_formulario"] = False
 
     with st.form("form_busca_ref"):
-        input_pesquisa = st.text_input("Digite o Nº do Processo / Referência", value=st.session_state["ref_pesquisada"])
+        input_pesquisa = st.text_input("Nº do Processo / Referência", value=st.session_state["ref_pesquisada"])
         btn_pesquisar = st.form_submit_button("Pesquisar Referência")
         
         if btn_pesquisar:
@@ -256,11 +278,10 @@ with aba1:
                 st.session_state["liberar_formulario"] = True
                 st.rerun()
             else:
-                st.warning("⚠️ Digite uma referência válida para pesquisar.")
+                st.warning("⚠️ Insira uma referência válida para realizar a busca.")
 
     if st.session_state["liberar_formulario"]:
         ref_atual = st.session_state["ref_pesquisada"]
-        
         filtro_proc = df_tracking[df_tracking['Processo'].astype(str).str.upper() == ref_atual]
         
         def_container = ""
@@ -298,33 +319,33 @@ with aba1:
             status_salvo = str(ultimo_reg.get("Status", ""))
             if status_salvo in status_opcoes: def_status = status_salvo
             
-            st.success(f"✨ Referência **{ref_atual}** encontrada! Dados carregados.")
+            st.success(f"✨ Referência **{ref_atual}** localizada. Dados preenchidos automaticamente.")
         else:
-            st.info(f"ℹ️ Referência **{ref_atual}** não encontrada. Preencha os campos abaixo para cadastrá-la.")
+            st.info(f"ℹ️ Nova referência **{ref_atual}**. Preencha os campos abaixo para registar a carga.")
 
         idx_status = status_opcoes.index(def_status)
 
         with st.form("form_dados_carga"):
-            st.markdown(f"### 📝 Passo 2: Dados do Contêiner para a Referência: **{ref_atual}**")
+            st.markdown(f"### 📋 Detalhes da Operação - Processo: **{ref_atual}**")
             
             col1, col2 = st.columns(2)
             with col1:
-                container_input = st.text_input("Nº do Contêiner (Ex: MSCU1234567)", value=def_container, help="Informe o contêiner para identificar o armador automaticamente.")
-                porto_transbordo_input = st.text_input("Porto de Transbordo", value=def_porto, help="Opcional. Preencha apenas se houver transbordo.")
-                data_transbordo_input = st.text_input("Data no Transbordo", value=def_data_t, help="Data de chegada no porto de transbordo.")
+                container_input = st.text_input("Nº do Contêiner", value=def_container, help="Formato ex.: MSCU1234567")
+                porto_transbordo_input = st.text_input("Porto de Transbordo", value=def_porto)
+                data_transbordo_input = st.text_input("Data no Transbordo", value=def_data_t)
                 
             with col2:
-                status_input = st.selectbox("Status Atual da Carga", status_opcoes, index=idx_status, help="Selecione em que fase logística a carga se encontra agora.")
-                destino_final_input = st.text_input("Destino Final", value=def_dest, help="Ex: Itajaí, Curitiba, etc.")
-                eta_input = st.text_input("Previsão de Chegada (ETA)", value=def_eta, help="Formato DD/MM/AAAA. Deixe em branco se a confirmar.")
-                door_ramp_input = st.text_input("Modalidade (DOOR/RAMP)", value=def_door, help="Opcional. Informe a modalidade caso aplicável.")
+                status_input = st.selectbox("Status Atual da Carga", status_opcoes, index=idx_status)
+                destino_final_input = st.text_input("Destino Final", value=def_dest)
+                eta_input = st.text_input("Previsão de Chegada (ETA)", value=def_eta)
+                door_ramp_input = st.text_input("Modalidade (DOOR/RAMP)", value=def_door)
                 
-            st.markdown("### 🚀 Passo 3: Ação")
+            st.markdown("<br>", unsafe_allow_html=True)
             col_btn1, col_btn2 = st.columns(2)
             with col_btn1:
-                btn_analisar = st.form_submit_button("Apenas Salvar Dados")
+                btn_analisar = st.form_submit_button("Salvar Registo")
             with col_btn2:
-                btn_email = st.form_submit_button("Gerar E-mail p/ Cliente")
+                btn_email = st.form_submit_button("Salvar e Gerar E-mail p/ Cliente")
         
         if btn_analisar or btn_email:
             if ref_atual and container_input:
@@ -375,28 +396,26 @@ with aba1:
                 df_tracking = pd.concat([df_tracking, pd.DataFrame([nova_linha])], ignore_index=True)
                 salvar_dados(df_tracking)
                 
-                st.info(f"⛴️ **Armador Identificado:** {armador_encontrado} | [Acessar rastreamento oficial]({link_direto})")
+                st.info(f"⛴️ **Armador Identificado:** {armador_encontrado} | [Aceder ao rastreamento oficial]({link_direto})")
                 
                 if btn_email:
-                    st.text_area("📋 Texto Pronto para Copiar:", value=corpo_email, height=150)
+                    st.text_area("📋 Modelo de E-mail Pronto para Copiar:", value=corpo_email, height=150)
                 
                 st.markdown("---")
-                st.subheader("🕒 Linha do Tempo desta Referência")
+                st.subheader("🕒 Histórico Recente do Processo")
                 historico_ref = df_tracking[(df_tracking['Container'] == container_input.upper()) | (df_tracking['Processo'].astype(str).str.upper() == ref_atual)]
                 st.dataframe(historico_ref, use_container_width=True)
                 
             else:
-                st.error("⚠️ Por favor, informe o Nº do Contêiner antes de prosseguir.")
+                st.error("⚠️ Por favor, informe o Nº do Contêiner.")
 
 with aba2:
-    st.subheader("Base Geral de Dados com Alertas Inteligentes de ETA")
+    st.subheader("Histórico Consolidado e Prazos")
     if df_tracking.empty:
-        st.info("Nenhum registro encontrado.")
+        st.info("Nenhum registo encontrado na base de dados.")
     else:
         df_tracking['Processo'] = df_tracking['Processo'].astype(str).str.upper()
         df_tracking['Container'] = df_tracking['Container'].astype(str).str.upper()
-        
-        # Atualiza a coluna de alertas para todos os registros carregados
         df_tracking['Alerta ETA'] = df_tracking['ETA Destino'].apply(calcular_alerta_eta)
         
         st.dataframe(df_tracking, use_container_width=True)
@@ -406,19 +425,18 @@ with aba2:
             st.rerun()
 
 with aba3:
-    st.subheader("Edição Rápida (Apenas Status Atual)")
-    st.markdown("Abaixo você vê **apenas a última atualização** de cada contêiner. Dê um **duplo clique** para editar e salve.")
+    st.subheader("Edição Rápida da Base")
+    st.markdown("Abaixo constam apenas os registos mais recentes de cada contêiner. Edite diretamente nas células e clique em salvar.")
     
     if df_tracking.empty:
-        st.info("Não há dados para editar.")
+        st.info("Não há dados disponíveis para edição.")
     else:
         df_latest = df_tracking.drop_duplicates(subset=['Container'], keep='last')
         df_editado = st.data_editor(df_latest, use_container_width=True)
         
         if st.button("💾 Salvar Modificações"):
             df_tracking.update(df_editado)
-            # Recalcula o alerta de ETA caso o usuário tenha alterado a data na edição
             df_tracking['Alerta ETA'] = df_tracking['ETA Destino'].apply(calcular_alerta_eta)
             salvar_dados(df_tracking)
-            st.success("Dados salvos e atualizados no banco!")
+            st.success("Modificações gravadas com sucesso!")
             st.rerun()
