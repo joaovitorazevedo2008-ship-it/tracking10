@@ -148,4 +148,27 @@ Sua Equipe de Logística"""
                 
                 # --- EXIBIR HISTÓRICO DA REFERÊNCIA ---
                 st.markdown("---")
-                st.subheader("🕒 Histórico de
+                st.subheader("🕒 Histórico de Atualizações desta Carga")
+                
+                # Filtra os registos pelo Contêiner ou pelo Processo (se preenchido)
+                if processo_input:
+                    historico_ref = df_tracking[(df_tracking['Container'] == container_input.upper()) | (df_tracking['Processo'] == processo_input)]
+                else:
+                    historico_ref = df_tracking[df_tracking['Container'] == container_input.upper()]
+                
+                st.dataframe(historico_ref, use_container_width=True)
+                # ----------------------------------------
+                
+            else:
+                st.error("Por favor, informe o número do contêiner.")
+
+with aba2:
+    st.subheader("Histórico de Contêineres Consultados (Geral)")
+    if df_tracking.empty:
+        st.info("Nenhum contêiner consultado ainda.")
+    else:
+        st.dataframe(df_tracking, use_container_width=True)
+        if st.button("🗑️ Limpar Histórico"):
+            if os.path.exists(ARQUIVO_DADOS):
+                os.remove(ARQUIVO_DADOS)
+            st.rerun()
