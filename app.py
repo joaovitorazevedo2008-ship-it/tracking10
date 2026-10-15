@@ -4,6 +4,30 @@ import os
 
 st.set_page_config(page_title="Redirecionador Inteligente de Tracking", page_icon="⚓", layout="wide")
 
+# --- SISTEMA DE LOGIN ---
+if "autenticado" not in st.session_state:
+    st.session_state["autenticado"] = False
+
+if not st.session_state["autenticado"]:
+    st.title("🔒 Acesso Restrito")
+    st.markdown("Por favor, insira suas credenciais para acessar o sistema.")
+    
+    with st.form("login_form"):
+        usuario = st.text_input("Usuário")
+        senha = st.text_input("Senha", type="password")
+        btn_login = st.form_submit_button("Entrar")
+        
+        if btn_login:
+            # Credenciais atualizadas
+            if usuario == "DCLOG" and senha == "DCTRACKING":
+                st.session_state["autenticado"] = True
+                st.rerun()
+            else:
+                st.error("Usuário ou senha incorretos!")
+    
+    st.stop()
+# ------------------------
+
 ARQUIVO_DADOS = "dados_tracking_prefixos.csv"
 
 # Função para identificar o armador pelo prefixo do contêiner
@@ -45,7 +69,16 @@ def salvar_dados(df):
 
 df_tracking = carregar_dados()
 
-st.title("⚓ Redirecionador Inteligente de Contêineres - Comex")
+# Botão de sair (Logout) no canto superior direito
+col_titulo, col_sair = st.columns([8, 1])
+with col_titulo:
+    st.title("⚓ Redirecionador Inteligente de Contêineres - Comex")
+with col_sair:
+    st.write("") # Espaço em branco
+    if st.button("🚪 Sair"):
+        st.session_state["autenticado"] = False
+        st.rerun()
+
 st.markdown("Digite o número do contêiner e a IA identifica o armador e gera o link direto para a consulta instantânea!")
 
 aba1, aba2 = st.tabs(["🔍 Consulta Rápida por Prefixo", "📋 Painel e Histórico"])
@@ -61,7 +94,6 @@ with aba1:
             porto_transbordo_input = st.text_input("Porto de Transbordo (Opcional)")
             data_transbordo_input = st.text_input("Data de Chegada no Transbordo (Opcional)")
         with col2:
-            # Status atualizado com a nova opção
             status_input = st.selectbox("Status Atual", [
                 "Em trânsito", 
                 "Liberado na Alfândega", 
@@ -82,7 +114,6 @@ with aba1:
                 
                 st.markdown(f"### 🔗 [Clique aqui para abrir o rastreio direto no site da {armador_encontrado}]({link_direto})")
                 
-                # E-mail atualizado (sem armador e com os novos campos)
                 corpo_email = f"""Prezado(a) Cliente,
 
 Gostaríamos de atualizar o status do processo {processo_input}:
