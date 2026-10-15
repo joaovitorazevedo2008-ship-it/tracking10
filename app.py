@@ -57,7 +57,7 @@ def identificar_armador(container):
         return "Outro / Não Mapeado", f"https://www.google.com/search?q=tracking+container+{container.strip()}"
 
 def carregar_dados():
-    colunas_padrao = ["Processo", "Container", "Armador Detectado", "Status", "Porto de Transbordo", "Data Transbordo", "Destino Final", "ETA Destino", "E-mail Pronto"]
+    colunas_padrao = ["Processo", "Container", "Armador Detectado", "Status", "Porto de Transbordo", "Data Transbordo", "Destino Final", "ETA Destino", "DOOR/RAMP", "E-mail Pronto"]
     if os.path.exists(ARQUIVO_DADOS):
         df = pd.read_csv(ARQUIVO_DADOS)
         if "Link de Rastreio" in df.columns:
@@ -107,10 +107,17 @@ with aba1:
             ])
             destino_final_input = st.text_input("Destino Final")
             eta_input = st.text_input("Previsão de Chegada (ETA) no Destino Final", value="DD/MM/AAAA")
+            door_ramp_input = st.text_input("DOOR/RAMP (Opcional)")
             
-        btn_analisar = st.form_submit_button("Salvar e Identificar Armador")
+        # Botões lado a lado
+        col_btn1, col_btn2 = st.columns(2)
+        with col_btn1:
+            btn_analisar = st.form_submit_button("Identificar Armador")
+        with col_btn2:
+            btn_email = st.form_submit_button("✉️ Gerar E-mail")
         
-        if btn_analisar:
+        # Se qualquer um dos botões for clicado, o sistema processa a carga
+        if btn_analisar or btn_email:
             if container_input:
                 armador_encontrado, link_direto = identificar_armador(container_input)
                 
@@ -121,12 +128,13 @@ with aba1:
                     texto_transbordo = f" Vale lembrar que a carga passará por {porto}{data}."
 
                 local_destino = f" em {destino_final_input}" if destino_final_input else ""
+                modalidade_door = f" (Modalidade: {door_ramp_input})" if door_ramp_input else ""
 
                 corpo_email = f"""Olá! Tudo bem?
 
 Passando para te atualizar sobre o andamento da sua carga referente ao processo {processo_input} (Contêiner {container_input.upper()}).
 
-Neste momento, o status da carga consta como: "{status_input}". A nossa previsão atualizada é que ela chegue ao destino final{local_destino} na data de {eta_input}.{texto_transbordo}
+Neste momento, o status da carga consta como: "{status_input}". A nossa previsão atualizada é que ela chegue ao destino final{local_destino} na data de {eta_input}{modalidade_door}.{texto_transbordo}
 
 Para acompanhar as movimentações em tempo real, você pode acessar diretamente o link de rastreio do armador abaixo:
 {link_direto}
@@ -136,16 +144,6 @@ Qualquer dúvida, a nossa equipe segue totalmente à disposição!
 Um abraço,
 Equipe DC Logistics Brasil"""
 
-                # Guarda a consulta na memória para o botão do e-mail funcionar sem recarregar tudo
-                st.session_state['ultima_consulta'] = {
-                    'armador': armador_encontrado,
-                    'link': link_direto,
-                    'email': corpo_email,
-                    'container': container_input.upper(),
-                    'processo': processo_input
-                }
-                st.session_state['mostrar_email'] = False
-                
                 nova_linha = {
                     "Processo": processo_input,
                     "Container": container_input.upper(),
@@ -155,36 +153,31 @@ Equipe DC Logistics Brasil"""
                     "Data Transbordo": data_transbordo_input,
                     "Destino Final": destino_final_input,
                     "ETA Destino": eta_input,
+                    "DOOR/RAMP": door_ramp_input,
                     "E-mail Pronto": "Gerado"
                 }
                 df_tracking = pd.concat([df_tracking, pd.DataFrame([nova_linha])], ignore_index=True)
                 salvar_dados(df_tracking)
+                
+                st.success(f"Armador identificado com sucesso: **{armador_encontrado}**")
+                st.markdown(f"### 🔗 [Clique aqui para abrir o rastreio direto no site da {armador_encontrado}]({link_direto})")
+                
+                # Só mostra a caixa do e-mail se o botão clicado foi o "Gerar E-mail"
+                if btn_email:
+                    st.text_area("Modelo de E-mail Pronto para Copiar:", value=corpo_email, height=300)
+                
+                st.markdown("---")
+                st.subheader("🕒 Histórico de Atualizações desta Carga")
+                
+                if processo_input:
+                    historico_ref = df_tracking[(df_tracking['Container'] == container_input.upper()) | (df_tracking['Processo'] == processo_input)]
+                else:
+                    historico_ref = df_tracking[df_tracking['Container'] == container_input.upper()]
+                
+                st.dataframe(historico_ref, use_container_width=True)
+                
             else:
                 st.error("Por favor, informe o número do contêiner.")
-
-    # Mostra os resultados da última pesquisa salva na memória
-    if 'ultima_consulta' in st.session_state:
-        uc = st.session_state['ultima_consulta']
-        
-        st.success(f"Armador identificado com sucesso: **{uc['armador']}**")
-        st.markdown(f"### 🔗 [Clique aqui para abrir o rastreio direto no site da {uc['armador']}]({uc['link']})")
-        
-        # Novo botão exclusivo para o e-mail
-        if st.button("✉️ Gerar E-mail", type="primary"):
-            st.session_state['mostrar_email'] = True
-            
-        if st.session_state.get('mostrar_email'):
-            st.text_area("Modelo de E-mail Pronto para Copiar:", value=uc['email'], height=300)
-            
-        st.markdown("---")
-        st.subheader("🕒 Histórico de Atualizações desta Carga")
-        
-        if uc['processo']:
-            historico_ref = df_tracking[(df_tracking['Container'] == uc['container']) | (df_tracking['Processo'] == uc['processo'])]
-        else:
-            historico_ref = df_tracking[df_tracking['Container'] == uc['container']]
-        
-        st.dataframe(historico_ref, use_container_width=True)
 
 with aba2:
     st.subheader("Histórico de Contêineres Consultados (Geral)")
@@ -199,7 +192,7 @@ with aba2:
 
 with aba3:
     st.subheader("✏️ Editar Informações Salvas")
-    st.markdown("Dê um duplo clique em qualquer campo da tabela abaixo para editar. Quando terminar, clique no botão azul para salvar.")
+    st.markdown("Dê um duplo clique em qualquer campo da tabela abaixo para editar (Status, Destino, ETA, etc). Quando terminar, clique no botão azul para salvar.")
     
     if df_tracking.empty:
         st.info("Ainda não há dados para editar.")
