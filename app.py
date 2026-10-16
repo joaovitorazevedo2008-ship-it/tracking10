@@ -96,10 +96,13 @@ def extrair_texto_documento(arquivo):
         )
 
         if len(texto.strip()) < 20:
+          
             texto = pytesseract.image_to_string(
                 imagem,
                 lang="eng",
                 config="--psm 11"
+            )
+
 
         textos.append(texto)
 
