@@ -111,7 +111,7 @@ def extrair_texto_documento(arquivo):
     if not resultado.strip():
         raise RuntimeError("Nenhum texto foi reconhecido.")
 
-            )
+            
     return resultado
 
 def iniciar_banco():
