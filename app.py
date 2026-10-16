@@ -735,7 +735,8 @@ elif pagina == "Administração":
 
         if arquivo is not None:
             try:
-                texto = extrair_texto_documento(arquivo)with st.expander("Diagnóstico da leitura"):
+                texto = extrair_texto_documento(arquivo)
+                with st.expander("Diagnóstico da leitura"):
     st.text(texto if texto.strip() else "Nenhum texto reconhecido.")
                 campos = extrair_campos_carga(texto)
 
