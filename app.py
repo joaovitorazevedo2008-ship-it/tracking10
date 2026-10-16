@@ -10,6 +10,42 @@ st.set_page_config(
 
 DB = "tracking.db"
 
+ARMADORES = {
+    # Principais armadores internacionais
+    "MAEU": {"nome": "Maersk", "url": "https://www.maersk.com/tracking/"},
+    "MSCU": {"nome": "MSC", "url": "https://www.msc.com/en/track-a-shipment"},
+    "CMAU": {"nome": "CMA CGM", "url": "https://www.cma-cgm.com/ebusiness/tracking"},
+    "HLCU": {"nome": "Hapag-Lloyd", "url": "https://www.hapag-lloyd.com/pt/online-business/track/track.html"},
+    "COSU": {"nome": "COSCO Shipping", "url": "https://elines.coscoshipping.com/ebusiness/cargoTracking"},
+    "EISU": {"nome": "Evergreen", "url": "https://www.shipmentlink.com/"},
+    "ONEY": {"nome": "Ocean Network Express (ONE)", "url": "https://ecomm.one-line.com/one-ecom/manage-shipment/cargo-tracking"},
+    "OOLU": {"nome": "OOCL", "url": "https://www.oocl.com/eng/ourservices/eservices/trackandtrace/Pages/default.aspx"},
+    "YMLU": {"nome": "Yang Ming", "url": "https://www.yangming.com/"},
+    "ZIMU": {"nome": "ZIM", "url": "https://www.zim.com/tools/track-a-shipment"},
+    "HMMU": {"nome": "HMM", "url": "https://www.hmm21.com/"},
+    "WHLU": {"nome": "Wan Hai Lines", "url": "https://www.wanhai.com/"},
+    "PCIU": {"nome": "Pacific International Lines (PIL)", "url": "https://www.pilship.com/"},
+
+    # Outros armadores e operadores conhecidos
+    "SUDU": {"nome": "Hamburg Süd / Maersk", "url": "https://www.maersk.com/tracking/"},
+    "APLU": {"nome": "APL", "url": "https://www.cma-cgm.com/ebusiness/tracking"},
+    "ANNU": {"nome": "ANL", "url": "https://www.cma-cgm.com/ebusiness/tracking"},
+    "CMDU": {"nome": "CMA CGM", "url": "https://www.cma-cgm.com/ebusiness/tracking"},
+    "GESU": {"nome": "Gold Star Line", "url": "https://elines.coscoshipping.com/ebusiness/cargoTracking"},
+    "SITU": {"nome": "SITC", "url": "https://www.sitc.com/"},
+    "SKLU": {"nome": "Safmarine / Maersk", "url": "https://www.maersk.com/tracking/"},
+    "TRLU": {"nome": "Triton / equipamento", "url": "https://www.bic-code.org/pt/codigos-bic/"},
+    "TGHU": {"nome": "Textainer / equipamento", "url": "https://www.bic-code.org/pt/codigos-bic/"},
+    "FCIU": {"nome": "Florens / equipamento", "url": "https://www.bic-code.org/pt/codigos-bic/"},
+    "TEMU": {"nome": "Triton / equipamento", "url": "https://www.bic-code.org/pt/codigos-bic/"},
+    "BEAU": {"nome": "Beacon / equipamento", "url": "https://www.bic-code.org/pt/codigos-bic/"},
+    "CAIU": {"nome": "CAI / equipamento", "url": "https://www.bic-code.org/pt/codigos-bic/"},
+    "SEGU": {"nome": "Seaco / equipamento", "url": "https://www.bic-code.org/pt/codigos-bic/"},
+    "GESU": {"nome": "Gold Star Line", "url": "https://www.gsl.com.hk/"},
+}
+
+BIC_URL = "https://www.bic-code.org/pt/codigos-bic/"
+
 
 def conectar():
     return sqlite3.connect(DB)
