@@ -345,19 +345,49 @@ iniciar_banco()
 # ==========================================================
 
 st.markdown("""
+
 <style>
     .stApp {
         background-color: #f4f7fb;
+        color: #1f2937;
     }
-    h1, h2, h3 {
-        color: #123b68;
+
+    h1, h2, h3, h4, p, label,
+    .stMarkdown, [data-testid="stCaptionContainer"] {
+        color: #1f2937;
     }
-    div.stButton > button {
+
+    [data-testid="stWidgetLabel"] p {
+        color: #1f2937 !important;
+    }
+
+    .stTabs [data-baseweb="tab"] {
+        color: #334155 !important;
+    }
+
+    .stTabs [aria-selected="true"] {
+        color: #1261a0 !important;
+    }
+
+    div.stButton > button,
+    div.stFormSubmitButton > button {
         background-color: #1261a0;
-        color: white;
+        color: #ffffff !important;
+        border: none;
         border-radius: 8px;
     }
+
+    div.stButton > button:hover,
+    div.stFormSubmitButton > button:hover {
+        background-color: #0b4778;
+        color: #ffffff !important;
+    }
+
+    input, textarea {
+        color: #1f2937 !important;
+    }
 </style>
+
 """, unsafe_allow_html=True)
 
 st.title("DC LCL TRACKING")
