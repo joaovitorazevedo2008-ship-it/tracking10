@@ -207,50 +207,109 @@ def extrair_texto_documento(arquivo):
         "Envie um PDF, PNG, JPG ou WEBP."
     )
 
+
 def extrair_campos_carga(texto):
+    import re
+
+    texto = texto.replace("\r", "\n")
     texto = re.sub(r"[ \t]+", " ", texto)
+    linhas = [
+        re.sub(r"\s+", " ", linha).strip()
+        for linha in texto.splitlines()
+        if linha.strip()
+    ]
+    completo = "\n".join(linhas)
 
     def capturar(padroes):
         for padrao in padroes:
-            resultado = re.search(
+            m = re.search(
                 padrao,
-                texto,
-                flags=re.IGNORECASE | re.MULTILINE
+                completo,
+                re.IGNORECASE | re.MULTILINE
             )
-            if resultado:
-                return resultado.group(1).strip(" :-;,")
+            if m:
+                return m.group(1).strip(" :-;,")
         return ""
 
     booking = capturar([
         r"\bBooking(?:\s*(?:No\.?|Number|#))?\s*[:\-]?\s*([A-Z0-9][A-Z0-9\-\/]{5,})"
     ])
 
+    # Procura datas identificadas explicitamente como ETD e ETA.
     etd = capturar([
         r"\bETD\s*[:\-]?\s*(\d{1,2}[/-]\d{1,2}[/-]\d{2,4})",
         r"\bETD\s*[:\-]?\s*(\d{4}[/-]\d{1,2}[/-]\d{1,2})",
-        r"\bEstimated Departure\s*[:\-]?\s*(\d{1,2}[/-]\d{1,2}[/-]\d{2,4})"
+        r"\bEstimated Departure(?: Date)?\s*[:\-]?\s*(\d{1,2}[/-]\d{1,2}[/-]\d{2,4})"
     ])
 
     eta = capturar([
         r"\bETA\s*[:\-]?\s*(\d{1,2}[/-]\d{1,2}[/-]\d{2,4})",
         r"\bETA\s*[:\-]?\s*(\d{4}[/-]\d{1,2}[/-]\d{1,2})",
-        r"\bEstimated Arrival\s*[:\-]?\s*(\d{1,2}[/-]\d{1,2}[/-]\d{2,4})"
+        r"\bEstimated Arrival(?: Date)?\s*[:\-]?\s*(\d{1,2}[/-]\d{1,2}[/-]\d{2,4})"
     ])
 
+    # Portos identificados por rótulos explícitos.
     transbordo = capturar([
-        r"\b(?:Port of Transshipment|Transshipment Port|Transhipment Port|Porto de Transbordo)\s*[:\-]?\s*([A-Z][A-Z0-9 ,\-\/()]{2,})",
-        r"\b(?:Transshipment at|Transhipment at|Via)\s*[:\-]?\s*([A-Z][A-Z0-9 ,\-\/()]{2,})"
+        r"(?:Port of Transshipment|Transshipment Port|Transhipment Port|Porto de Transbordo)\s*[:\-]?\s*([A-Z][A-Z ,\-\/]{2,})"
     ])
 
     porto_final = capturar([
-        r"\b(?:Final Destination|Final Port|Port of Discharge|Destination Port|Porto Final|Destino Final)\s*[:\-]?\s*([A-Z][A-Z0-9 ,\-\/()]{2,})"
+        r"(?:Final Destination|Final Port|Port of Discharge|Destination Port|Porto Final|Destino Final)\s*[:\-]?\s*([A-Z][A-Z ,\-\/]{2,})"
     ])
 
-    # Alguns documentos usam a coluna "To" para indicar o destino.
-    if not porto_final:
-        porto_final = capturar([
-            r"^\s*To\s+([A-Z][A-Z0-9 ,\-\/()]{2,})"
-        ])
+    # Analisa a tabela de rota: From / To / By / ETD / ETA.
+    # Exemplo: SANTOS, SP -> SINGAPORE, SG -> TOKYO, JP.
+    portos_rota = []
+
+    for linha in linhas:
+        if re.search(
+            r"\b(?:From|To|Vessel|Voyage|ETD|ETA|Booking|Commodity)\b",
+            linha,
+            re.IGNORECASE
+        ):
+            continue
+
+        encontrados = re.findall(
+            r"\b([A-Z][A-Z .'-]{2,},\s*[A-Z]{2,3})"
+            r"(?:\s*\([A-Z0-9]{4,6}\))?",
+            linha
+        )
+
+        for porto in encontrados:
+            porto = porto.strip()
+            if porto not in portos_rota:
+                portos_rota.append(porto)
+
+    # Alternativa para tabelas extraídas como texto contínuo.
+    if not portos_rota:
+        encontrados = re.findall(
+            r"\b([A-Z][A-Z .'-]{2,},\s*[A-Z]{2,3})"
+            r"(?:\s*\([A-Z0-9]{4,6}\))?",
+            completo
+        )
+        for porto in encontrados:
+            porto = porto.strip()
+            if porto not in portos_rota:
+                portos_rota.append(porto)
+
+    if not porto_final and portos_rota:
+        porto_final = portos_rota[-1]
+
+    if not transbordo and len(portos_rota) >= 3:
+        transbordo = portos_rota[-2]
+
+    # Fallback para datas em tabelas que não rotulam cada data.
+    datas = re.findall(
+        r"\b(?:\d{1,2}[/-]\d{1,2}[/-]\d{2,4}|"
+        r"\d{4}[/-]\d{1,2}[/-]\d{1,2})\b",
+        completo
+    )
+
+    if not etd and datas:
+        etd = datas[0]
+
+    if not eta and len(datas) >= 2:
+        eta = datas[-1]
 
     referencia_dc = capturar([
         r"\b(?:DC Reference|DC Ref(?:erence)?|Referência DC|Código DC)\s*[:#\-]?\s*(DC[A-Z0-9\-]{3,})"
@@ -264,6 +323,7 @@ def extrair_campos_carga(texto):
         "etd": etd,
         "eta": eta
     }
+
 
 
 def conectar():
