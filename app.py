@@ -1,465 +1,361 @@
 import streamlit as st
-import pandas as pd
-import os
-from datetime import datetime, date
-import re
+import sqlite3
+from datetime import datetime
 
-# Tenta importar a biblioteca de leitura de PDF
-try:
-    from pypdf import PdfReader
-    has_pypdf = True
-except ImportError:
-    has_pypdf = False
-
-# Configuração inicial da página
 st.set_page_config(
-    page_title="Central de Rastreamento LCL | Agente de Cargas", 
-    page_icon="⚓", 
-    layout="wide", 
-    initial_sidebar_state="expanded"
+    page_title="DC LCL Tracking",
+    page_icon="🚢",
+    layout="wide"
 )
 
-# --- DESIGN CORPORATIVO PROFISSIONAL (AZUL, AMARELO E BRANCO) ---
+DB = "tracking.db"
+
+
+def conectar():
+    return sqlite3.connect(DB)
+
+
+def iniciar_banco():
+    with conectar() as conn:
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS cargas (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                dc TEXT UNIQUE NOT NULL,
+                container TEXT,
+                booking TEXT,
+                origem TEXT NOT NULL,
+                destino TEXT NOT NULL,
+                armador TEXT,
+                status TEXT NOT NULL,
+                eta TEXT
+            )
+        """)
+
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS eventos (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                dc TEXT NOT NULL,
+                data TEXT NOT NULL,
+                descricao TEXT NOT NULL,
+                local TEXT
+            )
+        """)
+
+
+def buscar(referencia):
+    referencia = referencia.strip().upper()
+
+    with conectar() as conn:
+        return conn.execute("""
+            SELECT * FROM cargas
+            WHERE UPPER(dc) = ?
+               OR UPPER(container) = ?
+               OR UPPER(booking) = ?
+        """, (referencia, referencia, referencia)).fetchall()
+
+
+def historico(dc):
+    with conectar() as conn:
+        return conn.execute("""
+            SELECT data, descricao, local
+            FROM eventos
+            WHERE dc = ?
+            ORDER BY data DESC, id DESC
+        """, (dc,)).fetchall()
+
+
+iniciar_banco()
+
 st.markdown("""
-    <style>
-    .stApp, [data-testid="stAppViewContainer"], [data-testid="stHeader"] {
-        background-color: #F8FAFC !important;
-    }
-    
-    .stApp p, .stApp span, .stApp div, .stApp label, h1, h2, h3, h4, h5, h6, .stMarkdown {
-        color: #002B5B !important;
-    }
-
-    h1 {
-        font-weight: 800 !important;
-        letter-spacing: -0.5px;
-    }
-
-    input, textarea, [data-baseweb="input"] input {
-        background-color: #002B5B !important;
-        color: #FFC000 !important;
-        border: 2px solid #FFC000 !important;
-        border-radius: 8px !important;
-        -webkit-text-fill-color: #FFC000 !important;
-        font-weight: 600 !important;
-    }
-
-    div[data-baseweb="select"] > div {
-        background-color: #002B5B !important;
-        color: #FFC000 !important;
-        border: 2px solid #FFC000 !important;
-        border-radius: 8px !important;
-    }
-    
-    div[data-baseweb="select"] span {
-        color: #FFC000 !important;
-        -webkit-text-fill-color: #FFC000 !important;
-        font-weight: 600 !important;
-    }
-
-    .stSelectbox svg {
-        fill: #FFC000 !important;
-    }
-
-    div[data-baseweb="popover"], div[data-baseweb="menu"], ul[role="listbox"] {
-        background-color: #002B5B !important;
-        border: 2px solid #FFC000 !important;
-        border-radius: 8px !important;
-    }
-    
-    div[data-baseweb="menu"] div, div[data-baseweb="menu"] span, ul[role="listbox"] li, ul[role="listbox"] span, div[role="option"] {
-        background-color: #002B5B !important;
-        color: #FFC000 !important;
-        -webkit-text-fill-color: #FFC000 !important;
-        font-weight: 600 !important;
-    }
-
-    ul[role="listbox"] li:hover, div[role="option"]:hover {
-        background-color: #003F88 !important;
-        color: #FFD633 !important;
-        -webkit-text-fill-color: #FFD633 !important;
-    }
-
-    button[kind="primary"], button[kind="secondary"], .stFormSubmitButton button, div.stButton > button {
-        background-color: #002B5B !important;
-        color: #FFC000 !important;
-        border: 2px solid #FFC000 !important;
-        font-weight: 800 !important;
-        border-radius: 8px !important;
-        padding: 10px 20px !important;
-        transition: all 0.2s ease-in-out;
-        -webkit-text-fill-color: #FFC000 !important;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.05);
-    }
-    button[kind="primary"]:hover, button[kind="secondary"]:hover, .stFormSubmitButton button:hover, div.stButton > button:hover {
-        background-color: #003F88 !important;
-        color: #FFD633 !important;
-        -webkit-text-fill-color: #FFD633 !important;
-        transform: translateY(-1px);
-        box-shadow: 0 4px 8px rgba(0,0,0,0.1);
-    }
-
-    .stTabs [data-baseweb="tab-list"] {
-        border-bottom: 2px solid #FFC000;
-        background-color: #FFFFFF;
-        border-radius: 8px 8px 0 0;
-        padding: 5px;
-    }
-    .stTabs [data-baseweb="tab"] {
-        color: #002B5B !important;
-        font-weight: 700;
-    }
-    .stTabs [aria-selected="true"] {
-        background-color: #002B5B !important;
-        color: #FFFFFF !important;
-        border-radius: 6px 6px 0 0 !important;
-    }
-    .stTabs [aria-selected="true"] * {
-        color: #FFFFFF !important;
-    }
-
-    div[data-testid="stMetric"], .stForm, div[data-testid="stExpander"] {
-        background-color: #FFFFFF !important;
-        border: 1px solid #E2E8F0 !important;
-        border-radius: 10px !important;
-        padding: 20px !important;
-        box-shadow: 0px 2px 6px rgba(0, 43, 91, 0.04);
-        border-left: 4px solid #FFC000 !important;
-    }
-
-    [data-testid="stDataFrame"], [data-testid="stTable"] {
-        background-color: #FFFFFF !important;
-        border: 1px solid #CBD5E1 !important;
-        border-radius: 8px !important;
-        padding: 5px;
-    }
-
-    [data-testid="stSidebar"] {
-        background-color: #FFFFFF !important;
-        border-right: 1px solid #E2E8F0;
-    }
-    
-    [data-testid="stAlert"] {
-        border-left: 5px solid #FFC000 !important;
-        background-color: #FFFFFF !important;
-        border-radius: 8px;
-        box-shadow: 0px 2px 4px rgba(0,0,0,0.02);
-    }
-    </style>
+<style>
+.stApp {
+    background-color: #0b1220;
+    color: #f1f5f9;
+}
+.block-container {
+    max-width: 1100px;
+    padding-top: 2rem;
+}
+div[data-testid="stMetric"] {
+    background: #172338;
+    padding: 18px;
+    border-radius: 12px;
+    border: 1px solid #263852;
+}
+</style>
 """, unsafe_allow_html=True)
-# --------------------------------------------------
 
-# --- SISTEMA DE LOGIN SEGURO ---
-if "autenticado" not in st.session_state:
-    st.session_state["autenticado"] = False
+st.title("🚢 DC LCL TRACKING")
+st.caption("International Freight • Shipment Visibility")
 
-if not st.session_state["autenticado"]:
-    st.markdown("<h1 style='text-align: center; color: #002B5B;'>⚓ CENTRAL LCL - LOGIN</h1>", unsafe_allow_html=True)
-    st.markdown("<p style='text-align: center; color: #002B5B;'>Ambiente Operacional Seguro</p>", unsafe_allow_html=True)
-    
-    col1, col2, col3 = st.columns([1, 1, 1])
-    with col2:
-        with st.form("login_form"):
-            usuario = st.text_input("Usuário")
-            senha = st.text_input("Senha", type="password")
-            btn_login = st.form_submit_button("Aceder ao Sistema")
-            
-            if btn_login:
-                if usuario == "DCLOG" and senha == "DCTRACKING":
-                    st.session_state["autenticado"] = True
-                    st.rerun()
-                else:
-                    st.error("Credenciais inválidas!")
-    st.stop()
-# ------------------------
+pagina = st.sidebar.radio(
+    "MENU",
+    ["Rastreamento", "Administração"]
+)
 
-# --- BARRA LATERAL ---
-with st.sidebar:
-    st.markdown("### ⚓ Painel Operacional LCL")
-    st.markdown("Ferramenta desenvolvida para centralizar a gestão de cargas fracionadas, eliminar retrabalho em portais de armadores e automatizar o follow-up com clientes.")
-    st.markdown("---")
-    if st.button("🚪 Encerrar Sessão"):
-        st.session_state["autenticado"] = False
-        st.rerun()
-# -----------------------------------------
+if pagina == "Rastreamento":
 
-ARQUIVO_DADOS = "dados_tracking_independente.csv"
+    st.subheader("Rastreie sua carga")
+    st.write(
+        "Pesquise pelo código DC, contêiner ou booking."
+    )
 
-def identificar_armador(container):
-    if not container or len(container.strip()) < 4:
-        return "Desconhecido", "#"
-    prefixo = container.strip()[:4].upper()
-    if prefixo in ["MSCU", "MEDU", "MSNU"]:
-        return "MSC", f"https://www.msc.com/en/track-a-shipment?trackingNumber={container.strip()}"
-    elif prefixo in ["MAEU", "MSKU", "MRKU", "APMU", "PONU", "SEAU", "POCU", "OCLU", "NZSU"]:
-        return "Maersk", f"https://www.maersk.com/tracking/{container.strip()}"
-    elif prefixo in ["HLCU", "HLXU", "HLBU", "AZLU", "CACU", "CASU", "CMUU", "CPSU", "CSQU", "DALU", "HAMU"]:
-        return "Hapag-Lloyd", f"https://www.hapag-lloyd.com/en/online-business/track/track-by-container.html?container={container.strip()}"
-    elif prefixo in ["CMAU", "CGMU", "CGHU", "CMNU", "ECMU", "AMCU", "TGHU"]:
-        return "CMA CGM", f"https://www.cma-cgm.com/ebusiness/tracking/search?SearchBy=Container&SearchValue={container.strip()}"
-    elif prefixo in ["ONEU", "NYKU", "TCLU"]:
-        return "ONE (Ocean Network Express)", f"https://ecomm.one-line.com/ecom/CUP_HOM_3301.do?sessLocale=en&bkgNo={container.strip()}"
-    elif prefixo in ["COSU", "CSLU", "CSNU", "CBHU", "FCIU"]:
-        return "COSCO", f"https://elines.coscoshipping.com/ebusiness/cargoTracking?trackingType=CONTAINER&trackingNumber={container.strip()}"
-    elif prefixo in ["EMCU", "EISU", "EGHU"]:
-        return "Evergreen", f"https://ct.shipmentlink.com/servlet/CT31_q?cntr_no={container.strip()}"
-    elif prefixo in ["ZIMU", "GSLU"]:
-        return "ZIM", f"https://www.zim.com/tools/track-a-shipment?consignmentnumber={container.strip()}"
-    elif prefixo == "YMLU":
-        return "Yang Ming", f"https://www.yangming.com/e-service/track_trace/track_trace_cargo_tracking.aspx?tno={container.strip()}"
-    else:
-        return "Armador Externo", f"https://www.google.com/search?q=tracking+container+{container.strip()}"
+    with st.form("consulta"):
+        referencia = st.text_input(
+            "Referência",
+            placeholder="Ex.: DC100001"
+        )
+        consultar = st.form_submit_button(
+            "🔎 RASTREAR",
+            use_container_width=True
+        )
 
-def carregar_dados():
-    colunas_padrao = ["Processo", "Container", "Armador Detectado", "Link Rastreio", "Status", "Porto Transbordo", "Data Transbordo", "Destino Final", "ETA Destino", "Modalidade", "E-mail Pronto", "Alerta ETA"]
-    if os.path.exists(ARQUIVO_DADOS):
-        df = pd.read_csv(ARQUIVO_DADOS)
-        for col in colunas_padrao:
-            if col not in df.columns:
-                df[col] = ""
-        return df.fillna("")
-    else:
-        return pd.DataFrame(columns=colunas_padrao)
-
-def salvar_dados(df):
-    df.to_csv(ARQUIVO_DADOS, index=False)
-
-def calcular_alerta_eta(eta_str):
-    if not eta_str or eta_str == "DD/MM/AAAA":
-        return "A Confirmar"
-    try:
-        data_eta = datetime.strptime(eta_str.strip(), "%d/%m/%Y").date()
-        hoje = date.today()
-        if data_eta < hoje:
-            return "🚨 Vencido"
-        elif data_eta == hoje:
-            return "⚠️ Vence Hoje"
+    if consultar:
+        if not referencia.strip():
+            st.warning("Digite uma referência.")
         else:
-            return "✅ No Prazo"
-    except ValueError:
-        return "A Confirmar"
+            resultados = buscar(referencia)
 
-df_tracking = carregar_dados()
+            if not resultados:
+                st.error("Nenhuma carga encontrada.")
+            else:
+                if len(resultados) > 1:
+                    st.info(
+                        f"{len(resultados)} cargas encontradas. "
+                        "O contêiner ou booking pode ser compartilhado."
+                    )
 
-st.title("⚓ CENTRAL INDEPENDENTE DE TRACKING LCL")
+                for carga in resultados:
+                    (
+                        id_carga, dc, container, booking,
+                        origem, destino, armador, status, eta
+                    ) = carga
 
-# --- DASHBOARD EXECUTIVO INTERATIVO ---
-if not df_tracking.empty:
-    df_ultimos = df_tracking.drop_duplicates(subset=['Container'], keep='last')
-    total_cargas = len(df_ultimos)
-    em_transito = len(df_ultimos[df_ultimos['Status'].isin(["Em trânsito", "A caminho do destino final"])])
-    liberadas = len(df_ultimos[df_ultimos['Status'].isin(["Liberado na Alfândega", "Disponível para Retirada", "Chegada confirmada"])])
-    
-    st.markdown("### 📊 Visão Geral da Operação (Clique para filtrar)")
-    col_m1, col_m2, col_m3 = st.columns(3)
-    
-    if "filtro_dashboard" not in st.session_state:
-        st.session_state["filtro_dashboard"] = "Todos"
+                    st.divider()
+                    st.header(f"📦 {dc}")
 
-    with col_m1:
-        if st.button(f"📦 Todos os Processos ({total_cargas})", use_container_width=True):
-            st.session_state["filtro_dashboard"] = "Todos"
-    with col_m2:
-        if st.button(f"🚢 Em Trânsito / Viagem ({em_transito})", use_container_width=True):
-            st.session_state["filtro_dashboard"] = "Transito"
-    with col_m3:
-        if st.button(f"✨ Liberados / Disponíveis ({liberadas})", use_container_width=True):
-            st.session_state["filtro_dashboard"] = "Liberados"
-            
-    st.markdown("<br>", unsafe_allow_html=True)
+                    a, b, c = st.columns(3)
+                    a.metric("STATUS", status)
+                    b.metric("ORIGEM", origem)
+                    c.metric("DESTINO", destino)
 
-aba1, aba2, aba3 = st.tabs(["🚀 1. Importação de Booking & Registo", "📋 2. Histórico Consolidado", "✏️ 3. Edição Rápida"])
+                    a, b, c = st.columns(3)
+                    a.write("**Contêiner**")
+                    a.write(container or "Não informado")
+                    b.write("**Booking**")
+                    b.write(booking or "Não informado")
+                    c.write("**ETA**")
+                    c.write(eta or "Não informado")
 
-with aba1:
-    st.markdown("### 📄 Automação por Booking (PDF) ou Cadastro Manual")
-    
-    if "auto_processo" not in st.session_state: st.session_state["auto_processo"] = ""
-    if "auto_origem" not in st.session_state: st.session_state["auto_origem"] = ""
-    if "auto_data_origem" not in st.session_state: st.session_state["auto_data_origem"] = ""
-    if "auto_destino" not in st.session_state: st.session_state["auto_destino"] = ""
-    if "auto_eta" not in st.session_state: st.session_state["auto_eta"] = ""
-    if "auto_modalidade" not in st.session_state: st.session_state["auto_modalidade"] = ""
+                    st.write(
+                        f"**Armador / agente:** "
+                        f"{armador or 'Não informado'}"
+                    )
 
-    if has_pypdf:
-        arquivo_pdf = st.file_uploader("Arraste ou selecione o PDF do Booking para preencher o sistema automaticamente", type=["pdf"])
-        if arquivo_pdf is not None:
-            try:
-                leitor = PdfReader(arquivo_pdf)
-                texto_pdf = ""
-                for pagina in leitor.pages:
-                    texto_pdf += pagina.extract_text() or ""
-                
-                # Extração inteligente orientada ao documento LCL
-                match_bkg = re.search(r'Booking\s*\|\s*([A-Z0-9/]+)', texto_pdf)
-                if match_bkg:
-                    st.session_state["auto_processo"] = match_bkg.group(1).strip()
-                
-                match_loading = re.search(r'Porto de Loading\s*\|\s*([A-Z\s,/-]+)', texto_pdf)
-                if match_loading:
-                    st.session_state["auto_origem"] = match_loading.group(1).strip().split('\n')[0]
-                elif "SANTOS" in texto_pdf.upper():
-                    st.session_state["auto_origem"] = "SANTOS, SP"
+                    st.subheader("Histórico da carga")
+                    eventos = historico(dc)
 
-                match_dest = re.search(r'Destino Final\s*\|\s*([A-Z\s,]+)', texto_pdf)
-                if match_dest:
-                    st.session_state["auto_destino"] = match_dest.group(1).strip().split('\n')[0]
-
-                match_datas = re.findall(r'\d{2}/\d{2}/\d{4}', texto_pdf)
-                if match_datas:
-                    if len(match_datas) >= 2:
-                        st.session_state["auto_data_origem"] = match_datas[0]
-                        st.session_state["auto_eta"] = match_datas[-1]
+                    if not eventos:
+                        st.info("Nenhum evento registrado.")
                     else:
-                        st.session_state["auto_eta"] = match_datas[0]
+                        for data, descricao, local in eventos:
+                            st.markdown(
+                                f"**● {descricao}**  \n"
+                                f"📅 {data}  \n"
+                                f"📍 {local or 'Local não informado'}"
+                            )
+                            st.divider()
 
-                if "Ramp" in texto_pdf:
-                    st.session_state["auto_modalidade"] = "RAMP"
-                elif "Door" in texto_pdf:
-                    st.session_state["auto_modalidade"] = "DOOR"
+    st.caption(
+        "O sistema consulta os registros cadastrados. "
+        "A integração com APIs de armadores será adicionada depois."
+    )
 
-                st.success("✨ Dados do Booking lidos e preenchidos automaticamente com sucesso!")
-            except Exception as e:
-                st.error(f"Erro ao ler PDF: {e}")
-        st.markdown("---")
+elif pagina == "Administração":
 
-    with st.form("form_dados_carga"):
-        st.markdown("### 📝 Dados Operacionais da Carga")
-        
-        col1, col2 = st.columns(2)
-        with col1:
-            processo_input = st.text_input("Nº do Processo / Booking", value=st.session_state["auto_processo"])
-            container_input = st.text_input("Nº do Contêiner / LCL", value="", help="Ex.: HAMU181362 ou TCLU8243983")
-            porto_transbordo_input = st.text_input("Porto de Origem / Transbordo", value=st.session_state["auto_origem"])
-            data_transbordo_input = st.text_input("Data no Transbordo / ETD", value=st.session_state["auto_data_origem"])
-            
-        with col2:
-            status_opcoes = [
-                "Embarcado",
-                "Em trânsito", 
-                "Em desova no porto de transbordo",
-                "A caminho do destino final",
-                "Chegada confirmada",
-                "Liberado na Alfândega", 
-                "Em inspeção alfandegária",
-                "Disponível para Retirada"
-            ]
-            status_input = st.selectbox("Status Atual da Carga", status_opcoes, index=0)
-            destino_final_input = st.text_input("Destino Final", value=st.session_state["auto_destino"])
-            eta_input = st.text_input("Previsão de Chegada (ETA)", value=st.session_state["auto_eta"] if st.session_state["auto_eta"] else "DD/MM/AAAA")
-            door_ramp_input = st.text_input("Modalidade (DOOR/RAMP)", value=st.session_state["auto_modalidade"])
-            
-        st.markdown("<br>", unsafe_allow_html=True)
-        col_btn1, col_btn2 = st.columns(2)
-        with col_btn1:
-            btn_analisar = st.form_submit_button("Salvar Registo")
-        with col_btn2:
-            btn_email = st.form_submit_button("Salvar e Gerar E-mail p/ Cliente")
-    
-    if btn_analisar or btn_email:
-        if processo_input and container_input:
-            armador_encontrado, link_direto = identificar_armador(container_input)
-            alerta_status_eta = calcular_alerta_eta(eta_input)
-            
-            local_destino = f" ({destino_final_input})" if destino_final_input else ""
-            modalidade = f" na modalidade {door_ramp_input}" if door_ramp_input else ""
-            
-            eta_txt = eta_input if eta_input and eta_input != "DD/MM/AAAA" else "a confirmar"
-            frase_eta = f"A previsão de chegada ao destino final{local_destino} é {eta_txt}{modalidade}."
-            
-            frase_transbordo = ""
-            if porto_transbordo_input:
-                data_t = f" para o dia {data_transbordo_input}" if data_transbordo_input else ""
-                frase_transbordo = f" Lembramos que a carga possui transbordo previsto no porto de {porto_transbordo_input}{data_t}."
+    st.subheader("Painel administrativo")
 
-            if status_input == "Embarcado":
-                corpo_email = f"Prezado cliente,\n\nInformamos que a carga referente ao processo {processo_input} (Contêiner: {container_input.upper()}) foi embarcada no porto de origem.\n{frase_eta}{frase_transbordo}"
-            elif status_input == "Em trânsito":
-                corpo_email = f"Prezado cliente,\n\nInformamos que a carga referente ao processo {processo_input} (Contêiner: {container_input.upper()}) encontra-se em trânsito marítimo.\n{frase_eta}{frase_transbordo}"
-            elif status_input == "Em desova no porto de transbordo":
-                corpo_email = f"Prezado cliente,\n\nInformamos que a carga referente ao processo {processo_input} (Contêiner: {container_input.upper()}) chegou ao porto de transbordo e encontra-se em desova.\n{frase_eta}"
-            elif status_input == "A caminho do destino final":
-                corpo_email = f"Prezado cliente,\n\nInformamos que a carga referente ao processo {processo_input} (Contêiner: {container_input.upper()}) encontra-se a caminho do destino final{local_destino}.\n{frase_eta}"
-            elif status_input == "Chegada confirmada":
-                corpo_email = f"Prezado cliente,\n\nInformamos que a chegada da carga referente ao processo {processo_input} (Contêiner: {container_input.upper()}) foi confirmada no destino final{local_destino}{modalidade}."
-            elif status_input == "Liberado na Alfândega":
-                corpo_email = f"Prezado cliente,\n\nInformamos que a carga referente ao processo {processo_input} (Contêiner: {container_input.upper()}) encontra-se liberada na alfândega e segue para entrega{modalidade}."
-            elif status_input == "Em inspeção alfandegária":
-                corpo_email = f"Prezado cliente,\n\nInformamos que a carga referente ao processo {processo_input} (Contêiner: {container_input.upper()}) encontra-se em inspeção alfandegária. Acompanhamos de perto."
-            elif status_input == "Disponível para Retirada":
-                corpo_email = f"Prezado cliente,\n\nInformamos que a carga referente ao processo {processo_input} (Contêiner: {container_input.upper()}) encontra-se disponível para retirada{local_destino}{modalidade}."
+    senha = st.text_input(
+        "Senha administrativa",
+        type="password"
+    )
 
-            nova_linha = {
-                "Processo": processo_input.upper(),
-                "Container": container_input.upper(),
-                "Armador Detectado": armador_encontrado,
-                "Link Rastreio": link_direto,
-                "Status": status_input,
-                "Porto Transbordo": porto_transbordo_input.upper(),
-                "Data Transbordo": data_transbordo_input,
-                "Destino Final": destino_final_input.upper(),
-                "ETA Destino": eta_input,
-                "Modalidade": door_ramp_input.upper(),
-                "E-mail Pronto": "Gerado",
-                "Alerta ETA": alerta_status_eta
-            }
-            df_tracking = pd.concat([df_tracking, pd.DataFrame([nova_linha])], ignore_index=True)
-            salvar_dados(df_tracking)
-            
-            st.info(f"⛴️ **Armador Identificado:** {armador_encontrado} | [🔗 Aceder Direto ao Rastreamento Oficial]({link_direto})")
-            
-            if btn_email:
-                st.text_area("📋 Modelo de E-mail Pronto para Copiar:", value=corpo_email, height=150)
-            
-            st.markdown("---")
-            st.subheader("🕒 Histórico Recente do Processo")
-            historico_ref = df_tracking[(df_tracking['Container'] == container_input.upper()) | (df_tracking['Processo'].astype(str).str.upper() == processo_input.upper())]
-            st.dataframe(historico_ref, use_container_width=True)
-            
-        else:
-            st.error("⚠️ Por favor, informe o Nº do Processo e o Contêiner.")
+    senha_configurada = st.secrets.get(
+        "ADMIN_PASSWORD", ""
+    )
 
-with aba2:
-    st.subheader("Histórico Consolidado e Processos Ativos")
-    if df_tracking.empty:
-        st.info("Nenhum registo encontrado na base de dados.")
-    else:
-        df_tracking['Processo'] = df_tracking['Processo'].astype(str).str.upper()
-        df_tracking['Container'] = df_tracking['Container'].astype(str).str.upper()
-        df_tracking['Alerta ETA'] = df_tracking['ETA Destino'].apply(calcular_alerta_eta)
-        
-        modo_filtro = st.session_state.get("filtro_dashboard", "Todos")
-        if modo_filtro == "Transito":
-            df_exibicao = df_tracking[df_tracking['Status'].isin(["Em trânsito", "A caminho do destino final"])]
-            st.markdown("📌 **Filtro Ativo:** Cargas em trânsito/viagem.")
-        elif modo_filtro == "Liberados":
-            df_exibicao = df_tracking[df_tracking['Status'].isin(["Liberado na Alfândega", "Disponível para Retirada", "Chegada confirmada"])]
-            st.markdown("📌 **Filtro Ativo:** Cargas liberadas ou disponíveis.")
-        else:
-            df_exibicao = df_tracking
-            st.markdown("📌 **Filtro Ativo:** Todos os processos registados.")
+    if not senha_configurada:
+        st.warning(
+            "Configure ADMIN_PASSWORD nos Secrets "
+            "do Streamlit antes de cadastrar cargas."
+        )
 
-        st.dataframe(df_exibicao, use_container_width=True)
-        
-        col_f1, col_f2 = st.columns([2, 1])
-        with col_f2:
-            if st.button("🗑️ Limpar Todos os Registros"):
-                if os.path.exists(ARQUIVO_DADOS):
-                    os.remove(ARQUIVO_DADOS)
-                st.rerun()
+    elif senha == senha_configurada:
 
-with aba3:
-    st.subheader("Edição Rápida da Base")
-    st.markdown("Edite diretamente nas células abaixo e clique em salvar alterações.")
-    
-    if df_tracking.empty:
-        st.info("Não há dados disponíveis para edição.")
-    else:
-        df_latest = df_tracking.drop_duplicates(subset=['Container'], keep='last')
-        df_editado = st.data_editor(df_latest, use_container_width=True)
-        
-        if st.button("💾 Salvar Modificações"):
-            df_tracking.update(df_editado)
-            df_tracking['Alerta ETA'] = df_tracking['ETA Destino'].apply(calcular_alerta_eta)
-            salvar_dados(df_tracking)
-            st.success("Modificações gravadas com sucesso!")
-            st.rerun()
+        st.success("Acesso administrativo autorizado.")
+
+        aba1, aba2 = st.tabs([
+            "Cadastrar carga",
+            "Registrar evento"
+        ])
+
+        with aba1:
+            with st.form("cadastro"):
+                dc = st.text_input(
+                    "Código DC *"
+                ).strip().upper()
+
+                container = st.text_input(
+                    "Número do contêiner"
+                ).strip().upper()
+
+                booking = st.text_input(
+                    "Booking"
+                ).strip().upper()
+
+                origem = st.text_input("Origem")
+                destino = st.text_input("Destino")
+                armador = st.text_input("Armador ou agente")
+
+                status = st.selectbox(
+                    "Status",
+                    [
+                        "Booking confirmado",
+                        "Carga recebida no armazém",
+                        "Consolidação",
+                        "Embarcado",
+                        "Em trânsito",
+                        "Chegada ao destino",
+                        "Desconsolidação",
+                        "Liberado",
+                        "Entregue",
+                        "Atrasado"
+                    ]
+                )
+
+                eta = st.text_input(
+                    "ETA",
+                    placeholder="DD/MM/AAAA"
+                )
+
+                salvar = st.form_submit_button(
+                    "Salvar carga"
+                )
+
+            if salvar:
+                if not dc.startswith("DC") or len(dc) <= 2:
+                    st.error("O código precisa começar com DC.")
+                elif not origem.strip() or not destino.strip():
+                    st.error("Preencha origem e destino.")
+                else:
+                    try:
+                        with conectar() as conn:
+                            conn.execute("""
+                                INSERT INTO cargas (
+                                    dc, container, booking,
+                                    origem, destino, armador,
+                                    status, eta
+                                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                            """, (
+                                dc, container, booking,
+                                origem.strip(), destino.strip(),
+                                armador.strip(), status, eta.strip()
+                            ))
+
+                            conn.execute("""
+                                INSERT INTO eventos (
+                                    dc, data, descricao, local
+                                ) VALUES (?, ?, ?, ?)
+                            """, (
+                                dc,
+                                datetime.now().strftime("%Y-%m-%d"),
+                                "Cadastro inicial: " + status,
+                                origem.strip()
+                            ))
+
+                        st.success(f"Carga {dc} cadastrada!")
+                        st.rerun()
+
+                    except sqlite3.IntegrityError:
+                        st.error("Esse código DC já está cadastrado.")
+
+        with aba2:
+            with conectar() as conn:
+                cargas = conn.execute(
+                    "SELECT dc FROM cargas ORDER BY dc"
+                ).fetchall()
+
+            if cargas:
+                codigos = [c[0] for c in cargas]
+
+                with st.form("evento"):
+                    dc_evento = st.selectbox(
+                        "Código DC",
+                        codigos
+                    )
+
+                    descricao = st.text_input(
+                        "Descrição da movimentação"
+                    )
+
+                    local = st.text_input("Local")
+
+                    data = st.date_input(
+                        "Data",
+                        value=datetime.now().date()
+                    )
+
+                    atualizar_status = st.checkbox(
+                        "Atualizar status da carga"
+                    )
+
+                    novo_status = st.selectbox(
+                        "Novo status",
+                        [
+                            "Booking confirmado",
+                            "Carga recebida no armazém",
+                            "Consolidação",
+                            "Embarcado",
+                            "Em trânsito",
+                            "Chegada ao destino",
+                            "Desconsolidação",
+                            "Liberado",
+                            "Entregue",
+                            "Atrasado"
+                        ]
+                    )
+
+                    registrar = st.form_submit_button(
+                        "Registrar movimentação"
+                    )
+
+                if registrar:
+                    if not descricao.strip():
+                        st.error("Informe a descrição.")
+                    else:
+                        with conectar() as conn:
+                            conn.execute("""
+                                INSERT INTO eventos (
+                                    dc, data, descricao, local
+                                ) VALUES (?, ?, ?, ?)
+                            """, (
+                                dc_evento,
+                                data.isoformat(),
+                                descricao.strip(),
+                                local.strip()
+                            ))
+
+                            if atualizar_status:
+                                conn.execute("""
+                                    UPDATE cargas
+                                    SET status = ?
+                                    WHERE dc = ?
+                                """, (novo_status, dc_evento))
+
+                        st.success("Movimentação registrada!")
+                        st.rerun()
+            else:
+                st.info("Cadastre uma carga primeiro.")
+
+    elif senha:
+        st.error("Senha incorreta.")
